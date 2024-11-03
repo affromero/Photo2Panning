@@ -22,6 +22,7 @@ def read_image(image_path: str) -> Image.Image:
         img = Image.open(BytesIO(response.content))
     else:
         img = Image.open(image_path)
+    print(f"Reading image from {image_path} with size {img.size}")
     return img
 
 
@@ -165,8 +166,8 @@ def create_zoom_video(
         # Calculate total frames needed
         total_frames = int(duration * fps)
 
-        # how many steps until the size of the image is half of the org size
-        half_size_steps = np.linspace(1.0, 0.5, total_frames)
+        # how many steps until the size of the image is 25% of the original
+        half_size_steps = np.linspace(1.0, 0.75, total_frames)
         for step in half_size_steps:
             left = int(img_width * (1 - step) / 2)
             top = int(img_height * (1 - step) / 2)

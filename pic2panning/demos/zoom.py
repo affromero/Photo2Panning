@@ -4,12 +4,8 @@ from typing import Literal, cast
 
 import tyro
 
-from pic2panning import (  # type: ignore[attr-defined]
-    VALID_MOVEMENT,
-    AudioOpts,
-    Opts,
-    main,
-)
+from pic2panning.main import main
+from pic2panning.utils.options import VALID_MOVEMENT, AudioOpts, Opts
 
 
 def demo_zoom(
@@ -24,11 +20,11 @@ def demo_zoom(
             "https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg"
         ],
         output_file="assets/demo_zoom.mp4",
-        time=[5],
+        time=[2],
         ratio="16:9",
         audio=[AudioOpts("https://www.youtube.com/watch?v=dQw4w9WgXcQ")],
-        # output_size=(1080, 1920),
-        output_size=None,
+        output_size=(6240 // 2, 4160 // 2),
+        # output_size=None,
         fps=[30],
         movement=[cast(VALID_MOVEMENT, f"zoom-{movement}")],
         add_reverse=add_reverse,

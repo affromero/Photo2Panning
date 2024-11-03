@@ -5,13 +5,8 @@ from typing import cast
 import tyro
 from PIL import Image
 
-from pic2panning import (  # type: ignore[attr-defined]
-    VALID_PANNING,
-    VALID_ZOOM,
-    Opts,
-    create_panning_video,
-    create_zoom_video,
-)
+from pic2panning.utils.options import VALID_PANNING, VALID_ZOOM, Opts
+from pic2panning.utils.process import create_panning_video, create_zoom_video
 
 
 def main(opts: Opts) -> None:

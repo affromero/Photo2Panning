@@ -4,12 +4,8 @@ from typing import Literal, cast
 
 import tyro
 
-from pic2panning import (  # type: ignore[attr-defined]
-    VALID_MOVEMENT,
-    AudioOpts,
-    Opts,
-    main,
-)
+from pic2panning.main import main
+from pic2panning.utils.options import VALID_MOVEMENT, AudioOpts, Opts
 
 
 def demo_panning(

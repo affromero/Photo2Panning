@@ -12,7 +12,6 @@ This project allows you to convert a landscape image into a panning video. The o
 - Support for multiple images
 - Support for multiple audio formats
 - Support for multiple movement directions
-- Very fast
 
 ## Installation
 
