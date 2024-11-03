@@ -13,12 +13,13 @@ def demo_zoom(
     /,
     add_reverse: bool = False,
     focus_center: bool = False,
+    images: list[str] = [
+        "https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg"
+    ],
 ) -> None:
     """Demo function for zoom-in."""
     opts = Opts(
-        images=[
-            "https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg"
-        ],
+        images=images,
         output_file="assets/demo_zoom.mp4",
         time=[2],
         ratio="16:9",

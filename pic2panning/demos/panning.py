@@ -13,13 +13,14 @@ def demo_panning(
     /,
     add_reverse: bool = False,
     focus_center: bool = False,
+    images: list[str] = [
+        "https://images.pexels.com/photos/29188556/pexels-photo-29188556/free-photo-of-stunning-sunset-over-mulafossur-waterfall-faroe-islands.jpeg"
+    ],
 ) -> None:
     """Demo function for panning left to right."""
     opts = Opts(
-        images=[
-            "https://images.pexels.com/photos/29188556/pexels-photo-29188556/free-photo-of-stunning-sunset-over-mulafossur-waterfall-faroe-islands.jpeg"
-        ],
-        output_file="assets/demo_panning_focus.mp4",
+        images=images,
+        output_file="assets/demo_panning.mp4",
         time=[4],
         ratio="16:9",
         audio=[AudioOpts("https://www.youtube.com/watch?v=dQw4w9WgXcQ")],
