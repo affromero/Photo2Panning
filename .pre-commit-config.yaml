@@ -123,7 +123,7 @@ repos:
       hooks:
         # Run the linter.
           - id: ruff
-            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E']
+            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E', --ignore, C901]
             exclude: ^dependencies/|^experiments/|poetry\.lock
         # Run the formatter.
           - id: ruff-format

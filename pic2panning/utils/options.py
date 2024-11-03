@@ -1,16 +1,18 @@
-"""Utility functions for creating videos and GIFs from images."""
+"""Options for creating a video or GIF from images."""
 
 import os
 from dataclasses import field
 from pathlib import Path
-from typing import Literal, TypeAlias, cast
+from typing import Annotated, Literal, TypeAlias, cast
 
 import moviepy.editor as mpe
 import numpy as np
 from PIL import Image
+from pydantic import ConfigDict
 from pydantic.dataclasses import dataclass
 from pytubefix import YouTube
 from pytubefix.cli import on_progress
+from tyro.conf import arg
 
 VALID_MOVEMENT: TypeAlias = Literal[
     "panning-lr",
@@ -45,6 +47,11 @@ class AudioOpts:
             self.start_at = 0
 
     @staticmethod
+    def list_constructor(files: list[str]) -> list["AudioOpts"]:
+        """Create a list of AudioOpts objects from a list of audio files."""
+        return [AudioOpts(audio_file=i) for i in files]
+
+    @staticmethod
     def download_audio(link: str) -> str:
         """Download audio from a YouTube URL and save as mp3."""
         # Create Youtube Object.
@@ -74,7 +81,7 @@ class AudioOpts:
         return video
 
 
-@dataclass
+@dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class Opts:
     """Options for creating a video or GIF from images."""
 
@@ -90,17 +97,14 @@ class Opts:
     ratio: str = "16:9"
     """ Output video size ratio. For example, '16:9', '4:3'. """
 
-    audio: AudioOpts | list[AudioOpts] | None = None
+    audio: (
+        Annotated[list[AudioOpts], arg(constructor=AudioOpts.list_constructor)]
+        | None
+    ) = None
     """ Audio options. """
-
-    output_format: Literal["video", "gif"] = "video"
-    """ Output type. """
 
     output_size: tuple[int, int] | None = (1080, 1920)
     """ Output video size. Format (width, height) """
-
-    mail_to: str | None = None
-    """ Email to send the Video/GIF. """
 
     fps: list[int] = field(default_factory=lambda: [30])
     """ Frames per second. """
@@ -124,7 +128,7 @@ class Opts:
         of images and time are the same.
         """
         for img in self.images:
-            if not os.path.exists(img):
+            if "http" not in img and not os.path.exists(img):
                 raise FileNotFoundError(f"File {img} not found.")
 
         # list of images and list of times must have the same length
@@ -143,13 +147,26 @@ class Opts:
             raise ValueError(
                 "Number of images, time, fps, and movement must be the same."
             )
-        if isinstance(self.audio, list) and len(self.audio) != len(
-            self.images
+
+        if (
+            self.audio is not None
+            and len(self.audio) > 1
+            and len(self.audio) != len(self.images)
         ):
             raise ValueError(
                 "Number of audio options and images must be the same in "
                 "case of multiple audio options."
             )
+
+        # focus_center requires fps > 100
+        if self.focus_center and any(i <= 100 for i in self.fps):
+            print("Focus center requires fps > 100. Setting fps to 100.")
+            self.fps = [i if i > 100 else 100 for i in self.fps]
+
+        # focus_center requires time < 4
+        if self.focus_center and any(i >= 5 for i in self.time):
+            print("Focus center requires time < 5. Setting time to 3.")
+            self.time = [i if i < 4 else 3 for i in self.time]
 
     def make_gif(self, img_list: list[list[Image.Image]]) -> None:
         """Create a GIF from a list of images."""
@@ -178,6 +195,11 @@ class Opts:
 
         """
         videos = []
+        audio = (
+            self.audio[0]
+            if isinstance(self.audio, list) and len(self.audio) == 1
+            else self.audio
+        )
         for idx, img in enumerate(img_list):
             if self.output_size is not None:
                 img_np_list = [
@@ -186,8 +208,8 @@ class Opts:
             else:
                 img_np_list = [np.asarray(i) for i in img]
             video = mpe.ImageSequenceClip(img_np_list, fps=self.fps[idx])
-            if isinstance(self.audio, list):
-                video = self.audio[idx].set_audio(video)
+            if isinstance(audio, list):
+                video = audio[idx].set_audio(video)
             videos.append(video)
         if len(videos) > 1:
             video_cat = cast(
@@ -196,133 +218,6 @@ class Opts:
             )
         else:
             video_cat = videos[0]
-        if isinstance(self.audio, AudioOpts):
-            video_cat = self.audio.set_audio(video_cat)
+        if isinstance(audio, AudioOpts):
+            video_cat = audio.set_audio(video_cat)
         return video_cat
-
-
-def parse_aspect_ratio(ratio: str) -> tuple[int, int]:
-    """Parse the aspect ratio string into a width and height."""
-    width, height = map(int, ratio.split(":"))
-    return width, height
-
-
-def create_panning_video(
-    image_path: str,
-    duration: int,
-    aspect_ratio: str,
-    fps: int = 30,
-    add_reverse: bool = False,
-    movement: VALID_PANNING = "lr",
-) -> list[Image.Image]:
-    """Create a panning video effect of an image from left to.
-
-    right with a given aspect ratio.
-
-    Args:
-        image_path (str): Path of the input image.
-        duration (int): Length of the video in seconds.
-        aspect_ratio (str): Aspect ratio of the video in format 'height:width',
-             e.g., '16:9'.
-        fps (int): Frames per second of the video (default is 30).
-        add_reverse (bool): Add reverse video (default is False).
-        movement (str): Movement direction of the panning effect
-            (default is 'lr').
-
-    """
-    current_video = []
-    with Image.open(image_path) as img:
-        img_width, img_height = img.size
-
-        # Parse aspect ratio
-        aspect_width, aspect_height = parse_aspect_ratio(aspect_ratio)
-        # Determine frame height and width
-        float_ratio = aspect_width / aspect_height
-        if float_ratio > 1:
-            float_ratio = 1 / float_ratio
-
-        if movement in ["lr", "rl"]:
-            frame_height = img_height
-            frame_width = int(frame_height * float_ratio)
-        else:
-            frame_width = img_width
-            frame_height = int(frame_width * float_ratio)
-
-        # Calculate total frames needed
-        total_frames = int(duration * fps)
-
-        # Calculate step for panning effect
-        if movement in ["lr", "rl"]:
-            left_most = 0
-            last_left_most = img_width - frame_width
-            all_left = np.linspace(left_most, last_left_most, total_frames)
-            for left_int in all_left:
-                left = left_int
-                right = left + frame_width
-                frame = img.crop((left, 0, right, img_height))
-                current_video.append(frame)
-            if movement == "rl":
-                current_video = current_video[::-1]
-        else:
-            top_most = 0
-            last_top_most = img_height - frame_height
-            all_top = np.linspace(top_most, last_top_most, total_frames)
-            for top_int in all_top:
-                top = top_int
-                bottom = top + frame_height
-                frame = img.crop((0, top, img_width, bottom))
-                current_video.append(frame)
-            if movement == "du":
-                current_video = current_video[::-1]
-        if add_reverse:
-            current_video.extend(current_video[::-1][1:])
-    return current_video
-
-
-def create_zoom_video(
-    image_path: str,
-    duration: int,
-    fps: int = 30,
-    add_reverse: bool = False,
-    movement: VALID_ZOOM = "in",
-) -> list[Image.Image]:
-    """Create a zoom-in video effect of an image from out to in.
-
-    Args:
-        image_path (str): Path of the input image.
-        duration (int): Length of the video in seconds.
-        fps (int): Frames per second of the video (default is 30).
-        add_reverse (bool): Add reverse video (default is False).
-        movement (str): Movement direction of the zoom effect (default is in).
-
-    """
-    current_video: list[Image.Image] = []
-    with Image.open(image_path) as img:
-        # resize image for modulo 64
-        img_width, img_height = img.size
-
-        # Calculate total frames needed
-        total_frames = int(duration * fps)
-
-        # how many steps until the size of the image is half of the org size
-        half_size_steps = np.linspace(1.0, 0.5, total_frames)
-        for step in half_size_steps:
-            left = int(img_width * (1 - step) / 2)
-            top = int(img_height * (1 - step) / 2)
-            right = img_width - left
-            bottom = img_height - top
-            frame = img.crop((left, top, right, bottom))
-            current_video.append(frame)
-
-        # resize all frames to the smallest frame size
-        frame_sizes = [frame.size for frame in current_video]
-        min_width = min([size[0] for size in frame_sizes])
-        min_height = min([size[1] for size in frame_sizes])
-        current_video = [
-            frame.resize((min_width, min_height)) for frame in current_video
-        ]
-        if movement == "out":
-            current_video = current_video[::-1]
-        if add_reverse:
-            current_video.extend(current_video[::-1][1:])
-    return current_video
