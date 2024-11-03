@@ -16,7 +16,8 @@ This project allows you to convert a landscape image into a panning video. The o
 ## Installation
 
 ```bash
-git clone https://github.com/affromero/pic2panning.git
+git clone https://github.com/affromero/Photo2Panning.git
+cd Photo2Panning
 poetry install
 ```
 
