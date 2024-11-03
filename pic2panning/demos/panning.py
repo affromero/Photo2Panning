@@ -16,6 +16,7 @@ def demo_panning(
     images: list[str] = [
         "https://images.pexels.com/photos/29188556/pexels-photo-29188556/free-photo-of-stunning-sunset-over-mulafossur-waterfall-faroe-islands.jpeg"
     ],
+    song: str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 ) -> None:
     """Demo function for panning left to right."""
     opts = Opts(
@@ -23,7 +24,7 @@ def demo_panning(
         output_file="assets/demo_panning.mp4",
         time=[4],
         ratio="16:9",
-        audio=[AudioOpts("https://www.youtube.com/watch?v=dQw4w9WgXcQ")],
+        audio=[AudioOpts(song)],
         output_size=(1080, 1920),
         fps=[240],
         movement=[cast(VALID_MOVEMENT, f"panning-{movement}")],

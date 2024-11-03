@@ -16,6 +16,7 @@ def demo_zoom(
     images: list[str] = [
         "https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg"
     ],
+    song: str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 ) -> None:
     """Demo function for zoom-in."""
     opts = Opts(
@@ -23,7 +24,7 @@ def demo_zoom(
         output_file="assets/demo_zoom.mp4",
         time=[2],
         ratio="16:9",
-        audio=[AudioOpts("https://www.youtube.com/watch?v=dQw4w9WgXcQ")],
+        audio=[AudioOpts(song)],
         output_size=(6240 // 2, 4160 // 2),
         # output_size=None,
         fps=[30],
