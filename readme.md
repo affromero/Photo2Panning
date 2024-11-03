@@ -33,11 +33,15 @@ poetry run python -m pic2panning.main --images https://images.pexels.com/photos/
 
 <img src="https://images.pexels.com/photos/29188556/pexels-photo-29188556/free-photo-of-stunning-sunset-over-mulafossur-waterfall-faroe-islands.jpeg" alt="Example Panning" width="500"/>
 
+Demo command: `poetry run python -m pic2panning.demos.panning lr`
+
 https://github.com/user-attachments/assets/c15d7058-7fe2-4b23-a109-6074f607784b
 
 ### Example Zooming in and out
 
 <img src="https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg" alt="Example Zoom" width="500"/>
+
+Demo command: `poetry run python -m pic2panning.demos.zoom in`
 
 https://github.com/user-attachments/assets/087623cb-1381-4924-876e-0637c264f78e
 
