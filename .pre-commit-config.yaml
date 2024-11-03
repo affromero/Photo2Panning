@@ -1,0 +1,167 @@
+---
+# $ pre-commit install --install-hooks
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+    - repo: https://github.com/pre-commit/pre-commit-hooks
+      rev: v5.0.0
+      hooks:
+          - id: trailing-whitespace
+            exclude: ^.*.torrent|^/cli/unittests/|poetry.lock|unittest_logs/
+
+          - id: end-of-file-fixer
+            exclude: ^.*.torrent|^.*.pkl|^.*\.egg-info/|unittest_logs/
+
+          - id: mixed-line-ending
+            args: [--fix, lf]
+
+          - id: check-yaml
+            exclude: ^dependencies/|^experiments/dependencies/|^.*/runs/runs_.*.yaml|^cli/unittests/
+
+          - id: check-added-large-files
+            args: [--maxkb=2000]
+
+          - id: check-merge-conflict
+          - id: check-case-conflict
+          - id: check-json
+          - id: check-toml
+            exclude: tests/fixtures/invalid_lock/poetry\.lock
+          - id: pretty-format-json
+            args: [--autofix, --no-ensure-ascii, --no-sort-keys]
+
+          # - id: double-quote-string-fixer
+          #   exclude: ^dependencies/|^experiments/dependencies/|^experiments/
+
+    - repo: https://github.com/psf/black-pre-commit-mirror
+      rev: 24.8.0
+      hooks:
+          - id: black
+          # It is recommended to specify the latest version of Python
+          # supported by your project here, or alternatively use
+          # pre-commit's default_language_version, see
+          # https://pre-commit.com/#top_level-default_language_version
+            language_version: python3.10
+            exclude: ^dependencies/|^experiments/dependencies/|^experiments/
+            args: [--line-length=79, --target-version=py310, --quiet]
+
+    - repo: https://github.com/executablebooks/mdformat
+      rev: 0.7.18
+      hooks:
+          - id: mdformat
+            args: [--number]
+            additional_dependencies:
+                - mdformat-openmmlab
+                - mdformat_frontmatter
+                - linkify-it-py
+
+    # - repo: https://github.com/PyCQA/docformatter # there is an issue with the latest version and python_env - uncomment as soon as possible
+    #   rev: v1.3.1
+    #   hooks:
+    #       - id: docformatter
+    #         args: [--in-place, --wrap-descriptions, '79']
+
+    - repo: https://github.com/jumanjihouse/pre-commit-hook-yamlfmt
+      rev: 0.2.3 # or other specific tag
+      hooks:
+          - id: yamlfmt
+            exclude: ^dependencies/|^experiments/|^.*/runs/runs_.*.yaml|^cli/unittests/
+
+
+    # - repo: https://github.com/asottile/pyupgrade
+    #   rev: v3.3.1
+    #   hooks:
+    #       - id: pyupgrade
+    #         args:
+    #             # - --py36-plus
+    #             # - --py37-plus
+    #             # - --py38-plus
+    #             - --py39-plus
+    #         #     # - --py311-plus
+    #         exclude: ^dependencies/|^dependencies/|^experiments/dependencies/|^experiments/
+
+    - repo: https://github.com/lovesegfault/beautysh
+      rev: v6.2.1
+      hooks:
+          - id: beautysh
+            exclude: ^dependencies/|^experiments/dependencies/|poetry\.lock
+
+    # - repo: https://github.com/pycqa/isort
+    #   rev: 5.11.2
+    #   hooks:
+    #       - id: isort
+    #         name: isort
+    #         entry: isort
+    #         language: python
+    #         types: [python]
+    #         exclude: ^^dependencies/|^experiments/|^cli/
+    #         args: [--line-length=79, --multi-line=3, --force-grid-wrap=0, --trailing-comma, --use-parentheses, --ensure-newline-before-comments]
+    #         # additional_dependencies: [isort>=5.12.0]
+
+    - repo: local
+      hooks:
+          - id: toml-sort-fix
+            name: toml-sort-fix
+            entry: toml-sort
+            args: [--in-place]
+            language: python
+            exclude: poetry\.lock
+            types: [toml]
+            additional_dependencies: [toml-sort>=0.23.1]
+
+          - id: toml-sort
+            name: toml-sort
+            entry: toml-sort
+            args: [--check]
+            language: python
+            exclude: poetry\.lock
+            types: [toml]
+            additional_dependencies: [toml-sort>=0.23.1]
+
+    - repo: https://github.com/astral-sh/ruff-pre-commit
+      # Ruff version.
+      rev: v0.7.2
+      hooks:
+        # Run the linter.
+          - id: ruff
+            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E']
+            exclude: ^dependencies/|^experiments/|poetry\.lock
+        # Run the formatter.
+          - id: ruff-format
+            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E']
+            exclude: ^dependencies/|^experiments/|poetry\.lock|
+
+    # - repo: https://github.com/jvllmr/poetry-types
+    #   rev: v0.4.0
+    #   hooks:
+    #       - id: poetry-types
+
+    - repo: https://github.com/pre-commit/mirrors-mypy
+      rev: v1.13.0
+      hooks:
+          - id: mypy
+            name: mypy
+            entry: mypy
+            language: python
+            types_or: [python, pyi]
+            exclude: poetry\.lock|configs/hax_ml/
+            require_serial: true
+            # args: [--strict, --ignore-missing-imports]
+            args: [--ignore-missing-imports, --scripts-are-modules, --install-types, --non-interactive, --warn-unused-ignores, --show-error-codes, --check-untyped-defs,
+                --disallow-incomplete-defs]
+            additional_dependencies:
+                - pydantic
+                - types-requests
+            # mypy --install-types
+
+
+    # - repo: https://github.com/oxsecurity/megalinter # sudo apt install npm && sudo npm install mega-linter-runner -g
+    # # install docker https://docs.docker.com/engine/install/ubuntu/#set-up-the-repository
+    # # install with sudo once: sudo mega-linter-runner .
+    #   rev: v6.8.0 # Git tag specifying the hook, not mega-linter-runner, version
+    #   hooks:
+    #       - id: megalinter-incremental # Faster, less thorough
+    #         stages:
+    #             - commit
+    #       - id: megalinter-full # Slower, more thorough
+    #         stages:
+    #             - push

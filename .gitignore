@@ -1,0 +1,5 @@
+audio/
+.DS_Store
+*.jpeg
+*mp4
+.mypy_cache/
