@@ -26,7 +26,7 @@ def demo_zoom(
         ratio="16:9",
         audio=[AudioOpts(song)],
         output_size=None,
-        fps=[30],
+        fps=[240],
         movement=[cast(VALID_MOVEMENT, f"zoom-{movement}")],
         add_reverse=add_reverse,
         focus_center=focus_center,
