@@ -5,7 +5,10 @@ from typing import Literal, cast
 import tyro
 
 from pic2panning.main import main_images as main
+from pic2panning.utils.logger import get_logger
 from pic2panning.utils.options import VALID_IMAGE_PROCESS, AudioOpts, Opts
+
+logger = get_logger()
 
 
 def demo_panning(
@@ -13,15 +16,14 @@ def demo_panning(
     /,
     add_reverse: bool = False,
     focus_center: bool = False,
-    images: list[str] = [
-        "https://images.pexels.com/photos/29188556/pexels-photo-29188556/free-photo-of-stunning-sunset-over-mulafossur-waterfall-faroe-islands.jpeg"
-    ],
+    images: list[str] = ["DSC09552.JPG"],
     song: str = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    output_file: str = "assets/demo_panning.mp4",
 ) -> None:
     """Demo function for panning left to right."""
     opts = Opts(
         data=images,
-        output_file="assets/demo_panning.mp4",
+        output_file=output_file,
         time=[4],
         ratio="16:9",
         audio=[AudioOpts(audio_file=song)],

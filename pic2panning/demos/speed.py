@@ -7,7 +7,10 @@ import tyro
 
 from pic2panning.demos.add_audio_to_video import demo_add_audio_to_video
 from pic2panning.main import main_videos as main
+from pic2panning.utils.logger import get_logger
 from pic2panning.utils.options import VALID_VIDEO_PROCESS, CoverImageOpts, Opts
+
+logger = get_logger()
 
 
 def demo_speed_up(

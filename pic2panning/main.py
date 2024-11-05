@@ -8,6 +8,7 @@ import moviepy.editor as mpe
 import tyro
 from PIL import Image
 
+from pic2panning.utils.logger import get_logger
 from pic2panning.utils.options import (
     VALID_IMAGE_PROCESS,
     VALID_PANNING,
@@ -21,6 +22,8 @@ from pic2panning.utils.process import (
     create_zoom_video,
     speed_up_video,
 )
+
+logger = get_logger()
 
 
 def main_images(opts: Opts) -> None:
@@ -118,7 +121,7 @@ def main_videos(opts: Opts) -> None:
 
     if len(all_videos) > 1:
         first_size = mpe.VideoFileClip(all_videos[0]).size
-        print("Resizing all videos to the size of the first video.")
+        logger.info("Resizing all videos to the size of the first video.")
         all_videos = [
             mpe.VideoFileClip(video).resize(first_size) for video in all_videos
         ]

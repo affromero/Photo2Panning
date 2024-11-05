@@ -15,6 +15,9 @@ from pytubefix.cli import on_progress
 from tyro.conf import arg
 
 from pic2panning.utils.create_text import create_text_image
+from pic2panning.utils.logger import get_logger
+
+logger = get_logger()
 
 VALID_IMAGE_PROCESS: TypeAlias = Literal[
     "panning-lr",
@@ -62,7 +65,7 @@ class AudioOpts:
         """Download audio from a YouTube URL and save as mp3."""
         # Create Youtube Object.
         yt = YouTube(link, on_progress_callback=on_progress)
-        audio_dir = os.path.join(os.getcwd(), "audio")
+        audio_dir = "audio"
         Path(audio_dir).mkdir(parents=True, exist_ok=True)
         _title = (
             yt.title.replace(" ", "_")
@@ -78,8 +81,12 @@ class AudioOpts:
             audio = yt.streams.filter(only_audio=True).first()
             if not audio:
                 raise ValueError("No audio stream found.")
-            print("Downloading Audio...")
-            audio.download(filename=audio_file)
+            logger.info("Downloading Audio...")
+            audio.download(
+                output_path=audio_dir, filename=Path(audio_file).name
+            )
+            if not os.path.exists(audio_file):
+                raise FileNotFoundError(f"Audio file {audio_file} not found.")
         return audio_file
 
     def set_audio(self, video: mpe.VideoFileClip) -> mpe.VideoFileClip:
@@ -230,12 +237,12 @@ class Opts:
 
         # focus_center requires fps > 100
         if self.focus_center and any(i <= 100 for i in self.fps):
-            print("Focus center requires fps > 100. Setting fps to 100.")
+            logger.info("Focus center requires fps > 100. Setting fps to 100.")
             self.fps = [i if i > 100 else 100 for i in self.fps]
 
         # focus_center requires time < 4
         if self.focus_center and any(i >= 5 for i in self.time):
-            print("Focus center requires time < 5. Setting time to 3.")
+            logger.info("Focus center requires time < 5. Setting time to 3.")
             self.time = [i if i < 4 else 3 for i in self.time]
 
     def make_gif(self, img_list: list[list[Image.Image]]) -> None:

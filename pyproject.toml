@@ -36,7 +36,25 @@ pre-commit = "^4.0.1"
 pydantic = "^2.9.2"
 python = "^3.10"
 pytubefix = "^8.2.0"
+rich = "^13.9.4"
 tyro = "^0.8.14"
+
+[tool.poetry.group.generative.dependencies]
+accelerate = "^1.1.0"
+diffusers = "^0.31.0"
+jaxtyping = "^0.2.34"
+optimum-quanto = "0.2.2"
+protobuf = "^5.28.3"
+sam-2 = {git = "git@github.com:facebookresearch/sam2.git"}
+sentencepiece = "^0.2.0"
+torch = {source = "PytorchCuda", version = "^2.5.1"}
+torchvision = {source = "PytorchCuda", version = "^0.20.1"}
+transformers = "^4.46.2"
+
+[[tool.poetry.source]]
+name = "PytorchCuda"
+priority = "explicit"
+url = "https://download.pytorch.org/whl/cu121"
 
 [tool.pydantic-mypy]
 init_forbid_extra = true

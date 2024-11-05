@@ -6,3 +6,4 @@ audio/
 __pycache__/
 *.pyc
 *.mov
+assets/

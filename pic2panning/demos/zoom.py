@@ -5,7 +5,10 @@ from typing import Literal, cast
 import tyro
 
 from pic2panning.main import main_images as main
+from pic2panning.utils.logger import get_logger
 from pic2panning.utils.options import VALID_IMAGE_PROCESS, AudioOpts, Opts
+
+logger = get_logger()
 
 
 def demo_zoom(

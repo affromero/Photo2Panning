@@ -7,9 +7,12 @@ from typing import Literal
 import moviepy.editor as mpe
 import numpy as np
 import requests
-from PIL import Image
+from PIL import Image, ImageFilter
 
+from pic2panning.utils.logger import get_logger
 from pic2panning.utils.options import VALID_PANNING, VALID_ZOOM, AudioOpts
+
+logger = get_logger()
 
 
 def parse_aspect_ratio(ratio: str) -> tuple[int, int]:
@@ -25,8 +28,8 @@ def read_image(image_path: str) -> Image.Image:
         img = Image.open(BytesIO(response.content))
     else:
         img = Image.open(image_path)
-    print(f"Reading image from {image_path} with size {img.size}")
-    return img
+    logger.info(f"Reading image from {image_path} with size {img.size}")
+    return img.convert("RGB")
 
 
 def read_video(video_path: str) -> mpe.VideoFileClip:
@@ -41,7 +44,7 @@ def read_video(video_path: str) -> mpe.VideoFileClip:
         video = mpe.VideoFileClip(temp_file.name)
     else:
         video = mpe.VideoFileClip(video_path)
-    print(f"Reading video from {video_path} with size {video.size}")
+    logger.info(f"Reading video from {video_path} with size {video.size}")
     return video
 
 
@@ -92,6 +95,8 @@ def create_panning_video(
                     ),
                     Image.Resampling.LANCZOS,
                 )
+        # apply gaussian
+        img = img.filter(ImageFilter.GaussianBlur(0.2))
         img_width, img_height = img.size
 
         # Parse aspect ratio
@@ -180,6 +185,8 @@ def create_zoom_video(
                     ),
                     Image.Resampling.LANCZOS,
                 )
+
+        img = img.filter(ImageFilter.GaussianBlur(0.2))
         img_width, img_height = img.size
 
         # Calculate total frames needed
