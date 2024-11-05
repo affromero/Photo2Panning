@@ -14,13 +14,18 @@ from pytubefix import YouTube
 from pytubefix.cli import on_progress
 from tyro.conf import arg
 
-VALID_MOVEMENT: TypeAlias = Literal[
+from pic2panning.utils.create_text import create_text_image
+
+VALID_IMAGE_PROCESS: TypeAlias = Literal[
     "panning-lr",
     "panning-rl",
     "panning-ud",
     "panning-du",
     "zoom-in",
     "zoom-out",
+]
+VALID_VIDEO_PROCESS: TypeAlias = Literal[
+    "add-audio-to-video", "speed-up", "speed-down"
 ]
 VALID_PANNING: TypeAlias = Literal["lr", "rl", "ud", "du"]
 VALID_ZOOM: TypeAlias = Literal["in", "out"]
@@ -41,10 +46,11 @@ class AudioOpts:
         if "http" in self.audio_file:
             self.audio_file = AudioOpts.download_audio(self.audio_file)
 
-        if self.start_at:
-            self.start_at = int(self.audio_file.split("t=")[1].split("s")[0])
-        else:
-            self.start_at = 0
+        self.start_at = (
+            int(self.audio_file.split("t=")[1].split("s")[0])
+            if "t=" in self.audio_file and self.start_at == 0
+            else self.start_at
+        )
 
     @staticmethod
     def list_constructor(files: list[str]) -> list["AudioOpts"]:
@@ -58,7 +64,14 @@ class AudioOpts:
         yt = YouTube(link, on_progress_callback=on_progress)
         audio_dir = os.path.join(os.getcwd(), "audio")
         Path(audio_dir).mkdir(parents=True, exist_ok=True)
-        audio_file = f"{audio_dir}/{yt.title}.mp3"
+        _title = (
+            yt.title.replace(" ", "_")
+            .replace("|", "_")
+            .replace("/", "_")
+            .replace(")", "_")
+            .replace("(", "_")
+        )
+        audio_file = f"{audio_dir}/{_title}.mp3"
         if os.path.exists(audio_file):
             pass
         else:
@@ -81,12 +94,63 @@ class AudioOpts:
         return video
 
 
+@dataclass
+class CoverImageOpts:
+    """Options for adding an image to the video."""
+
+    text: str
+    """ Text to add to the image. """
+
+    size: tuple[int, int]
+    """ Size of the image. """
+
+    font_color: str = "white"
+    """ Font color of the text. """
+
+    font_path: str = ""
+    """ Path to the font file. """
+
+    justification: Literal["left", "center", "right"] = "center"
+    """ Justification for the text. """
+
+    time: int = 3
+    """ Time to display the image [seconds]. """
+
+    insert_at: Literal["start", "end"] = "start"
+    """ Insert the image at the start or end of the video. """
+
+    def __post_init__(self) -> None:
+        """Check if the font file exists."""
+        if self.font_path and not os.path.exists(self.font_path):
+            raise FileNotFoundError(f"Font file {self.font_path} not found.")
+
+    def create_text_image(self) -> Image.Image:
+        """Create a black image with wrapped text, adjusting the font size.
+
+        and justification.
+
+        Args:
+            image_size (Tuple[int, int]): Width and height of the image.
+
+        Returns:
+            Image.Image: A PIL Image object with the text rendered on it.
+
+        """
+        image = create_text_image(
+            self.text,
+            self.justification,
+            self.size,
+            font_path=self.font_path,
+        )
+        return image
+
+
 @dataclass(config=ConfigDict(arbitrary_types_allowed=True))
 class Opts:
     """Options for creating a video or GIF from images."""
 
-    images: list[str]
-    """ List of images to convert. """
+    data: list[str]
+    """ List of images/videos to convert. """
 
     output_file: str = "output.mp4"
     """ Output file name. """
@@ -109,10 +173,10 @@ class Opts:
     fps: list[int] = field(default_factory=lambda: [30])
     """ Frames per second. """
 
-    movement: list[VALID_MOVEMENT] = field(
+    process: list[VALID_IMAGE_PROCESS | VALID_VIDEO_PROCESS] = field(
         default_factory=lambda: ["panning-lr"]
     )
-    """ Movement type. """
+    """ process type. """
 
     add_reverse: bool = False
     """ Add reverse video. """
@@ -122,39 +186,45 @@ class Opts:
     Cool for zoom-in and fade-in.
     It requires fps > 100, and best with time < 5. """
 
+    speed: float = 1.0
+    """ Speed of the video. """
+
+    add_image: CoverImageOpts | None = None
+    """ Add an image to the video. """
+
     def __post_init__(self) -> None:
         """Check if the files exist and if the number.
 
         of images and time are the same.
         """
-        for img in self.images:
+        for img in self.data:
             if "http" not in img and not os.path.exists(img):
                 raise FileNotFoundError(f"File {img} not found.")
 
         # list of images and list of times must have the same length
         if len(self.time) == 1:
-            self.time = self.time * len(self.images)
+            self.time = self.time * len(self.data)
         if len(self.fps) == 1:
-            self.fps = self.fps * len(self.images)
-        if len(self.movement) == 1:
-            self.movement = self.movement * len(self.images)
+            self.fps = self.fps * len(self.data)
+        if len(self.process) == 1:
+            self.process = self.process * len(self.data)
         if (
-            len(self.images)
+            len(self.data)
             != len(self.time)
             != len(self.fps)
-            != len(self.movement)
+            != len(self.process)
         ):
             raise ValueError(
-                "Number of images, time, fps, and movement must be the same."
+                "Number of data, time, fps, and process must be the same."
             )
 
         if (
             self.audio is not None
             and len(self.audio) > 1
-            and len(self.audio) != len(self.images)
+            and len(self.audio) != len(self.data)
         ):
             raise ValueError(
-                "Number of audio options and images must be the same in "
+                "Number of audio options and data must be the same in "
                 "case of multiple audio options."
             )
 

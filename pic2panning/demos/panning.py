@@ -4,8 +4,8 @@ from typing import Literal, cast
 
 import tyro
 
-from pic2panning.main import main
-from pic2panning.utils.options import VALID_MOVEMENT, AudioOpts, Opts
+from pic2panning.main import main_images as main
+from pic2panning.utils.options import VALID_IMAGE_PROCESS, AudioOpts, Opts
 
 
 def demo_panning(
@@ -20,14 +20,14 @@ def demo_panning(
 ) -> None:
     """Demo function for panning left to right."""
     opts = Opts(
-        images=images,
+        data=images,
         output_file="assets/demo_panning.mp4",
         time=[4],
         ratio="16:9",
-        audio=[AudioOpts(song)],
+        audio=[AudioOpts(audio_file=song)],
         output_size=(1080, 1920),
         fps=[240],
-        movement=[cast(VALID_MOVEMENT, f"panning-{movement}")],
+        process=[cast(VALID_IMAGE_PROCESS, f"panning-{movement}")],
         add_reverse=add_reverse,
         focus_center=focus_center,
     )

@@ -1,12 +1,15 @@
 """Utility functions for creating videos and GIFs from images."""
 
+import tempfile
 from io import BytesIO
+from typing import Literal
 
+import moviepy.editor as mpe
 import numpy as np
 import requests
 from PIL import Image
 
-from pic2panning.utils.options import VALID_PANNING, VALID_ZOOM
+from pic2panning.utils.options import VALID_PANNING, VALID_ZOOM, AudioOpts
 
 
 def parse_aspect_ratio(ratio: str) -> tuple[int, int]:
@@ -24,6 +27,22 @@ def read_image(image_path: str) -> Image.Image:
         img = Image.open(image_path)
     print(f"Reading image from {image_path} with size {img.size}")
     return img
+
+
+def read_video(video_path: str) -> mpe.VideoFileClip:
+    """Read a video from a file."""
+    if "http" in video_path:
+        response = requests.get(video_path)
+        video_np = np.frombuffer(response.content, np.uint8)
+        # save the video to a file
+        temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".mp4")
+        with open(temp_file.name, "wb") as f:
+            f.write(video_np)
+        video = mpe.VideoFileClip(temp_file.name)
+    else:
+        video = mpe.VideoFileClip(video_path)
+    print(f"Reading video from {video_path} with size {video.size}")
+    return video
 
 
 def create_panning_video(
@@ -188,3 +207,87 @@ def create_zoom_video(
         if add_reverse:
             current_video.extend(current_video[::-1][1:])
     return current_video
+
+
+def add_audio_to_video(video: str, audio: AudioOpts, output_file: str) -> str:
+    """Add audio to a video.
+
+    Args:
+        video (str): Path of the video.
+        audio (str): Path of the youtube audio.
+        output_file (str): Path of the output video.
+
+    Returns:
+        str: Path of the video with audio.
+
+    """
+    video_mpe = mpe.VideoFileClip(video)
+    video_output = audio.set_audio(video_mpe)
+    video_output.write_videofile(
+        output_file, codec="libx264", audio_codec="aac"
+    )
+    return output_file
+
+
+def speed_up_video(
+    video: str,
+    speed: float,
+    output_file: str,
+    output_size: tuple[int, int] | None = None,
+) -> str:
+    """Speed up a video.
+
+    Args:
+        video (str): Path of the video.
+        speed (float): Speed factor.
+        output_file (str): Path of the output video.
+        output_size (tuple[int, int]): Output video size in
+            format (width, height).
+
+    Returns:
+        str: Path of the sped up video.
+
+    """
+    video_mpe = read_video(video)
+    if output_size:
+        video_mpe = video_mpe.resize(
+            width=output_size[0], height=output_size[1]
+        )
+    video_output = video_mpe.fx(mpe.vfx.speedx, speed)
+    video_output.write_videofile(
+        output_file, codec="libx264", audio_codec="aac"
+    )
+    return output_file
+
+
+def add_image_to_video(
+    video: str,
+    image: str,
+    time: int,
+    output_file: str,
+    insert_at: Literal["start", "end"],
+) -> str:
+    """Add an image to a video.
+
+    Args:
+        video (str): Path of the video.
+        image (str): Path of the image.
+        time (int): Time in seconds to add the image.
+        output_file (str): Path of the output video.
+        insert_at (str): Insert the image at the start or end of the video.
+
+    Returns:
+        str: Path of the video with the image added.
+
+    """
+    video_mpe = read_video(video)
+    image_mpe = mpe.ImageClip(image)
+    image_mpe = image_mpe.set_duration(time)
+    if insert_at == "start":
+        video_output = mpe.concatenate_videoclips([image_mpe, video_mpe])
+    else:
+        video_output = mpe.concatenate_videoclips([video_mpe, image_mpe])
+    video_output.write_videofile(
+        output_file, codec="libx264", audio_codec="aac"
+    )
+    return output_file

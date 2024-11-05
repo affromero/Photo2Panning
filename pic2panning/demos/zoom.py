@@ -4,8 +4,8 @@ from typing import Literal, cast
 
 import tyro
 
-from pic2panning.main import main
-from pic2panning.utils.options import VALID_MOVEMENT, AudioOpts, Opts
+from pic2panning.main import main_images as main
+from pic2panning.utils.options import VALID_IMAGE_PROCESS, AudioOpts, Opts
 
 
 def demo_zoom(
@@ -20,14 +20,14 @@ def demo_zoom(
 ) -> None:
     """Demo function for zoom-in."""
     opts = Opts(
-        images=images,
+        data=images,
         output_file="assets/demo_zoom.mp4",
         time=[2],
         ratio="16:9",
-        audio=[AudioOpts(song)],
+        audio=[AudioOpts(audio_file=song)],
         output_size=None,
         fps=[240],
-        movement=[cast(VALID_MOVEMENT, f"zoom-{movement}")],
+        process=[cast(VALID_IMAGE_PROCESS, f"zoom-{movement}")],
         add_reverse=add_reverse,
         focus_center=focus_center,
     )

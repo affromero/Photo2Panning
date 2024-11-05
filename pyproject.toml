@@ -26,11 +26,12 @@ readme = "README.md"
 version = "0.1.0"
 
 [tool.poetry.dependencies]
+fonttools = "^4.54.1"
 ipython = "^8.29.0"
 matplotlib = "^3.9.2"
 moviepy = "^1.0.3"
 mypy = "^1.13.0"
-pillow = "^11.0.0"
+pillow = "9.5.0" # required for moviepy resize
 pre-commit = "^4.0.1"
 pydantic = "^2.9.2"
 python = "^3.10"
