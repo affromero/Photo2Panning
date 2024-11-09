@@ -28,7 +28,6 @@ def demo_zoom(
         time=[2],
         ratio="16:9",
         audio=[AudioOpts(audio_file=song)],
-        output_size=None,
         fps=[240],
         process=[cast(VALID_IMAGE_PROCESS, f"zoom-{movement}")],
         add_reverse=add_reverse,

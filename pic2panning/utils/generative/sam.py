@@ -5,7 +5,6 @@ from typing import Any, Literal
 
 import numpy as np
 import torch
-import tyro
 from jaxtyping import Bool
 from PIL import Image
 from pydantic import ConfigDict

@@ -123,14 +123,15 @@ repos:
       hooks:
         # Run the linter.
           - id: ruff
-            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E', --ignore, 'C901,E501']
+            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E,F', --ignore, 'C901,E501,F722']
             exclude: ^dependencies/|^experiments/|poetry\.lock
         # Run the formatter.
           - id: ruff-format
-            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E']
+            args: [--fix, --unsafe-fixes, --select, 'C,I,D,E,F']
             exclude: ^dependencies/|^experiments/|poetry\.lock|
           # ignore C901: function is too complex # TODO: remove at some point
           # ignore E501: line too long
+          # ignore F722: syntax error in forward annotation - jaxtyping
 
 
     # - repo: https://github.com/jvllmr/poetry-types

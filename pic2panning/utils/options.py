@@ -28,7 +28,7 @@ VALID_IMAGE_PROCESS: TypeAlias = Literal[
     "zoom-out",
 ]
 VALID_VIDEO_PROCESS: TypeAlias = Literal[
-    "add-audio-to-video", "speed-up", "speed-down"
+    "add-audio-to-video", "speed", "panning-lr", "panning-rl"
 ]
 VALID_PANNING: TypeAlias = Literal["lr", "rl", "ud", "du"]
 VALID_ZOOM: TypeAlias = Literal["in", "out"]
@@ -174,7 +174,7 @@ class Opts:
     ) = None
     """ Audio options. """
 
-    output_size: tuple[int, int] | None = (1080, 1920)
+    output_size: tuple[int, int] = (1080, 1920)
     """ Output video size. Format (width, height) """
 
     fps: list[int] = field(default_factory=lambda: [30])
@@ -244,6 +244,15 @@ class Opts:
         if self.focus_center and any(i >= 5 for i in self.time):
             logger.info("Focus center requires time < 5. Setting time to 3.")
             self.time = [i if i < 4 else 3 for i in self.time]
+
+        # for some reason in video processing, output_file cant have the same name
+        # as any of the input files
+        if self.output_file in self.data:
+            raise ValueError(
+                "Output file name cannot be the same as any of the input files.\n"
+                f"Output file: {self.output_file}\n"
+                f"Input files: {self.data}"
+            )
 
     def make_gif(self, img_list: list[list[Image.Image]]) -> None:
         """Create a GIF from a list of images."""

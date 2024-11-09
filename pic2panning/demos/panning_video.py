@@ -1,4 +1,4 @@
-"""Demo for speed up with video."""
+"""Demo for panning video."""
 
 import tempfile
 from typing import cast
@@ -14,13 +14,13 @@ from pic2panning.utils.process import read_video
 logger = get_logger()
 
 
-def demo_speed_up(
+def demo_panning_video(
     videos: list[str] = [
         "https://videos.pexels.com/video-files/4133023/4133023-uhd_3840_2160_30fps.mp4"
     ],
     /,
-    speed: float = 25.0,
-    output_file: str = "assets/demo_speed.mp4",
+    speed: int = 5,
+    output_file: str = "assets/demo_panning_video.mp4",
     with_cover: bool = False,
     output_size: tuple[int, int] = (1080, 1920),
     song: str = "https://www.youtube.com/watch?v=v2AC41dglnM",
@@ -34,13 +34,13 @@ def demo_speed_up(
         _tempfile = output_file
     opts = Opts(
         data=videos,
+        speed=speed,
         output_file=_tempfile,
         output_size=output_size,
-        process=[cast(VALID_VIDEO_PROCESS, "speed")],
-        speed=speed,
+        process=[cast(VALID_VIDEO_PROCESS, "panning-lr")],
         add_image=(
             CoverImageOpts(
-                text="I wanted to add audio to this video but I was lazy to download an app\nand IG somehow destroys the quality when there is an audio?\n ----- \n...So I wrote an algorithm to add it from a YouTube link.",
+                text="Este video no estaba en 9:16\nY para no cortarlo, queria crearle un efecto bouncing\n ----- \n... Así que escribí un código que lo hiciera por mi",
                 size=tuple(read_video(videos[0]).size),
                 font_color="white",
                 justification="center",
@@ -65,4 +65,4 @@ def demo_speed_up(
 
 if __name__ == "__main__":
     """Run the demo."""
-    tyro.cli(demo_speed_up)
+    tyro.cli(demo_panning_video)

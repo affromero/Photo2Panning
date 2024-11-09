@@ -1,8 +1,9 @@
 """Utility functions for creating videos and GIFs from images."""
 
-import tempfile
+import os
 from io import BytesIO
-from typing import Literal
+from pathlib import Path
+from typing import Any, Literal
 
 import moviepy.editor as mpe
 import numpy as np
@@ -32,20 +33,158 @@ def read_image(image_path: str) -> Image.Image:
     return img.convert("RGB")
 
 
-def read_video(video_path: str) -> mpe.VideoFileClip:
+class IterateVideoFrames:
+    """Iterate over the frames of a video."""
+
+    def __init__(self, video: mpe.VideoFileClip) -> None:
+        """Initialize the class."""
+        self.video = video
+
+    def __iter__(self) -> "IterateVideoFrames":
+        """Return the iterator."""
+        self.current_frame = 0
+        return self
+
+    def __next__(self) -> Image.Image:
+        """Return the next frame."""
+        if self.current_frame < int(self.video.fps * self.video.duration):
+            # get_frame receives a time in seconds,
+            frame = self.video.get_frame(self.current_frame / self.video.fps)
+            self.current_frame += 1
+            return Image.fromarray(frame)
+        raise StopIteration
+
+
+def read_video(
+    video_path: str, downscale_factor: float | None = None
+) -> mpe.VideoFileClip:
     """Read a video from a file."""
     if "http" in video_path:
-        response = requests.get(video_path)
-        video_np = np.frombuffer(response.content, np.uint8)
-        # save the video to a file
-        temp_file = tempfile.NamedTemporaryFile(delete=True, suffix=".mp4")
-        with open(temp_file.name, "wb") as f:
-            f.write(video_np)
-        video = mpe.VideoFileClip(temp_file.name)
+        local_path = (
+            Path(video_path)
+            .name.replace(" ", "_")
+            .replace("%20", "_")
+            .replace("?", "")
+            .replace("=", "")
+            .replace("&", "")
+            .replace(":", "")
+            .replace("/", "")
+        )
+        output_file = os.path.join(f"assets/{local_path}")
+        if not os.path.exists(output_file):
+            response = requests.get(video_path)
+            video_np = np.frombuffer(response.content, np.uint8)
+            logger.info(f"Saving video locally to {output_file}")
+            with open(output_file, "wb") as f:
+                f.write(video_np)
+        else:
+            logger.info(f"Video already exists locally at {output_file}")
+        video = mpe.VideoFileClip(output_file)
+        # sometimes when reading the video without the size, it gets the wrong size
+        # video = mpe.VideoFileClip(temp_file.name, target_resolution=video.size)
     else:
+        # get size from file to avoid wrong size
         video = mpe.VideoFileClip(video_path)
-    logger.info(f"Reading video from {video_path} with size {video.size}")
+    # logger.info(f"Reading video from {video_path} with size {video.size}")
+    if downscale_factor:
+        video = video.resize(1 / downscale_factor)
     return video
+
+
+def save_video(
+    video: mpe.VideoFileClip, output_file: str, **kwargs: Any
+) -> str:
+    """Save a video."""
+    # ffmpeg_params: list[str] = kwargs.pop("ffmpeg_params", [])
+    # some videos might be stretched, so we need to set the aspect ratio
+    # if "-aspect" not in ffmpeg_params:
+    #     # aspect_ratio = "16:9"
+    #     # '-crf','18',
+    #     # ffmpeg_params.extend(["-crf", "18"])
+    #     # ffmpeg_params.extend(['-vf', f'scale={video.size[1]}:{video.size[0]}'])
+    # kwargs["ffmpeg_params"] = ["-aspect", "16:9"]
+    video.write_videofile(output_file, **kwargs)
+
+    return output_file
+
+
+def create_panning_video_from_video(
+    video_path: str,
+    pixel_shift: int,
+    aspect_ratio: str,
+    output_size: tuple[int, int] | None = None,
+) -> list[Image.Image]:
+    """Create a panning video effect of an image from left to.
+
+    right with a given aspect ratio.
+
+    Args:
+        video_path (str): Path of the input video.
+        pixel_shift (int): How many pixels to shift the video every frame.
+        aspect_ratio (str): Aspect ratio of the video in format 'height:width',
+             e.g., '16:9'.
+        fps (int): Frames per second of the video (default is 30).
+        add_reverse (bool): Add reverse video (default is False).
+        movement (str): Movement direction of the panning effect
+            (default is 'lr').
+        output_size (tuple[int, int]): Output video size
+            in format (width, height).
+
+    """
+    current_video = []
+    vid = read_video(video_path)  # for visualization
+    iter_video = iter(IterateVideoFrames(vid))
+    if output_size is not None:
+        _height, _width = vid.size
+        vid = vid.resize(
+            (
+                int(_width * output_size[1] / _height),
+                output_size[1],
+            ),
+        )
+    # apply gaussian
+    vid_width, vid_height = vid.size
+
+    # Parse aspect ratio
+    aspect_width, aspect_height = parse_aspect_ratio(aspect_ratio)
+    # Determine frame height and width
+    float_ratio = aspect_width / aspect_height
+    if float_ratio > 1:
+        float_ratio = 1 / float_ratio
+
+    frame_height = vid_height
+    frame_width = int(frame_height * float_ratio)
+
+    # Calculate total frames needed
+    total_frames = int(vid.duration * vid.fps)
+
+    # Calculate step for panning effect
+    left_most = 0
+    last_left_most = vid_width - frame_width
+    if last_left_most <= 0:
+        raise ValueError("The video is too short for the given duration.")
+    move = "right"
+    for _ in range(total_frames):
+        # video is going from left to right, once it reaches the end, it goes back to the left, and so on
+        left = left_most
+        right = left + frame_width
+        if move == "right" and right >= vid_width:
+            move = "left"
+            left = last_left_most - 1
+            right = vid_width - 1
+        elif move == "left" and left <= 0:
+            move = "right"
+            left = 0
+            right = frame_width
+        # crop video frame from moviepy
+        next_frame = next(iter_video)
+        frame = next_frame.crop((left, 0, right, vid_height))
+        current_video.append(frame)
+        if move == "right":
+            left_most += pixel_shift
+        else:
+            left_most -= pixel_shift
+    return current_video
 
 
 def create_panning_video(
@@ -228,11 +367,9 @@ def add_audio_to_video(video: str, audio: AudioOpts, output_file: str) -> str:
         str: Path of the video with audio.
 
     """
-    video_mpe = mpe.VideoFileClip(video)
+    video_mpe = read_video(video)
     video_output = audio.set_audio(video_mpe)
-    video_output.write_videofile(
-        output_file, codec="libx264", audio_codec="aac"
-    )
+    save_video(video_output, output_file, codec="libx264", audio_codec="aac")
     return output_file
 
 
@@ -256,14 +393,16 @@ def speed_up_video(
 
     """
     video_mpe = read_video(video)
+    video_output: mpe.VideoFileClip = video_mpe.fx(mpe.vfx.speedx, speed)
     if output_size:
-        video_mpe = video_mpe.resize(
-            width=output_size[0], height=output_size[1]
+        logger.info(f"Resizing video to {output_size}")
+        # video_mpe = video_mpe.resize(
+        #     width=output_size[0], height=output_size[1]
+        # )
+        video_output = video_output.fx(
+            mpe.vfx.resize, (output_size[0], output_size[1])
         )
-    video_output = video_mpe.fx(mpe.vfx.speedx, speed)
-    video_output.write_videofile(
-        output_file, codec="libx264", audio_codec="aac"
-    )
+    save_video(video_output, output_file, codec="libx264", audio_codec="aac")
     return output_file
 
 
@@ -288,13 +427,10 @@ def add_image_to_video(
 
     """
     video_mpe = read_video(video)
-    image_mpe = mpe.ImageClip(image)
-    image_mpe = image_mpe.set_duration(time)
+    image_mpe = mpe.ImageClip(image, duration=time).resize(video_mpe.size)
     if insert_at == "start":
         video_output = mpe.concatenate_videoclips([image_mpe, video_mpe])
     else:
         video_output = mpe.concatenate_videoclips([video_mpe, image_mpe])
-    video_output.write_videofile(
-        output_file, codec="libx264", audio_codec="aac"
-    )
+    save_video(video_output, output_file, codec="libx264", audio_codec="aac")
     return output_file
