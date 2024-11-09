@@ -103,6 +103,7 @@ def save_video(
     #     # ffmpeg_params.extend(["-crf", "18"])
     #     # ffmpeg_params.extend(['-vf', f'scale={video.size[1]}:{video.size[0]}'])
     # kwargs["ffmpeg_params"] = ["-aspect", "16:9"]
+    # kwargs["ffmpeg_params"] = ["-aspect", f"{video.size[1]}:{video.size[0]}"]
     video.write_videofile(output_file, **kwargs)
 
     return output_file
@@ -134,14 +135,7 @@ def create_panning_video_from_video(
     current_video = []
     vid = read_video(video_path)  # for visualization
     iter_video = iter(IterateVideoFrames(vid))
-    if output_size is not None:
-        _height, _width = vid.size
-        vid = vid.resize(
-            (
-                int(_width * output_size[1] / _height),
-                output_size[1],
-            ),
-        )
+
     # apply gaussian
     vid_width, vid_height = vid.size
 
@@ -179,6 +173,8 @@ def create_panning_video_from_video(
         # crop video frame from moviepy
         next_frame = next(iter_video)
         frame = next_frame.crop((left, 0, right, vid_height))
+        if output_size is not None and frame.size != output_size:
+            frame = frame.resize(output_size)
         current_video.append(frame)
         if move == "right":
             left_most += pixel_shift
@@ -187,7 +183,7 @@ def create_panning_video_from_video(
     return current_video
 
 
-def create_panning_video(
+def create_panning_video_from_image(
     image_path: str,
     duration: int,
     aspect_ratio: str,
@@ -396,12 +392,16 @@ def speed_up_video(
     video_output: mpe.VideoFileClip = video_mpe.fx(mpe.vfx.speedx, speed)
     if output_size:
         logger.info(f"Resizing video to {output_size}")
-        # video_mpe = video_mpe.resize(
+        # video_output = video_output.resize(
         #     width=output_size[0], height=output_size[1]
         # )
         video_output = video_output.fx(
             mpe.vfx.resize, (output_size[0], output_size[1])
         )
+        if video_output.size != output_size:
+            logger.warning(
+                f"Video size is {video_output.size} and not {output_size}"
+            )
     save_video(video_output, output_file, codec="libx264", audio_codec="aac")
     return output_file
 
@@ -427,7 +427,9 @@ def add_image_to_video(
 
     """
     video_mpe = read_video(video)
-    image_mpe = mpe.ImageClip(image, duration=time).resize(video_mpe.size)
+    image_mpe = mpe.ImageClip(image, duration=time).fx(
+        mpe.vfx.resize, (video_mpe.size)
+    )
     if insert_at == "start":
         video_output = mpe.concatenate_videoclips([image_mpe, video_mpe])
     else:

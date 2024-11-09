@@ -18,7 +18,7 @@ from pic2panning.utils.options import (
 from pic2panning.utils.process import (
     add_audio_to_video,
     add_image_to_video,
-    create_panning_video,
+    create_panning_video_from_image,
     create_panning_video_from_video,
     create_zoom_video,
     read_video,
@@ -44,7 +44,7 @@ def main_images(opts: Opts) -> None:
     frame_list: list[list[Image.Image]] = []
     for idx, img in enumerate(opts.data):
         if opts.process[idx].split("-")[0] == "panning":
-            current_video = create_panning_video(
+            current_video = create_panning_video_from_image(
                 img,
                 opts.time[idx],
                 opts.ratio,
@@ -144,8 +144,7 @@ def main_videos(opts: Opts) -> None:
 
     if len(all_videos) > 1:
         _all_videos = [read_video(i) for i in all_videos]
-        _all_videos = [i.resize(_all_videos[0].size) for i in _all_videos]
-        video_cat = mpe.concatenate_videoclips(_all_videos, method="chain")
+        video_cat = mpe.concatenate_videoclips(_all_videos, method="compose")
         # video_cat.write_videofile(
         #     opts.output_file,
         #     codec="libx264",

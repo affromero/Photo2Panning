@@ -9,7 +9,6 @@ from pic2panning.demos.add_audio_to_video import demo_add_audio_to_video
 from pic2panning.main import main_videos as main
 from pic2panning.utils.logger import get_logger
 from pic2panning.utils.options import VALID_VIDEO_PROCESS, CoverImageOpts, Opts
-from pic2panning.utils.process import read_video
 
 logger = get_logger()
 
@@ -21,7 +20,7 @@ def demo_panning_video(
     /,
     speed: int = 5,
     output_file: str = "assets/demo_panning_video.mp4",
-    with_cover: bool = False,
+    add_cover: str = "",
     output_size: tuple[int, int] = (1080, 1920),
     song: str = "https://www.youtube.com/watch?v=v2AC41dglnM",
 ) -> None:
@@ -40,15 +39,15 @@ def demo_panning_video(
         process=[cast(VALID_VIDEO_PROCESS, "panning-lr")],
         add_image=(
             CoverImageOpts(
-                text="Este video no estaba en 9:16\nY para no cortarlo, queria crearle un efecto bouncing\n ----- \n... Así que escribí un código que lo hiciera por mi",
-                size=tuple(read_video(videos[0]).size),
+                text=add_cover,
+                size=output_size,
                 font_color="white",
                 justification="center",
                 time=1,
                 insert_at="start",
                 font_path="/Library/Fonts/Arial Unicode.ttf",
             )
-            if with_cover
+            if add_cover
             else None
         ),
     )
