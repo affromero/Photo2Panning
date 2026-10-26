@@ -1,15 +1,20 @@
 # Photo2Panning
 
 Python library and CLI for photo motion, video processing, image editing,
-and local quantized image and video models on Apple Silicon.
+local geometry reconstruction, and quantized models on Apple Silicon.
 
 - [README](readme.md): Installation, public APIs, and runnable commands.
 - [Tool guide](docs/agent-tools.md): Job selection, field meanings, validation,
   execution, and error handling for agents.
-- [Local models](docs/models.md): Quantized FLUX, CPU segmentation, and local
-  LTX first/last frame video with the separate video extra.
+- [Local models](docs/models.md): Quantized FLUX, CPU segmentation, local
+  LTX first/last frame video, and MoGe-2 scene reconstruction with Metal
+  Gaussian rendering.
 - [Repository instructions](AGENTS.md): Rules for changing this library.
 - [Render job](examples/render.json): Photos, per-clip motion, and output size.
+- [Scene job](examples/scene.json): Reconstruct the bundled public waterfall
+  into a reusable Gaussian PLY and source-bound calibration JSON.
+- [Camera job](examples/camera.json): Pan the same photo, pause for a 3D
+  camera excursion, return to the paused composition, and resume.
 - [Edit job](examples/edit.json): Ordered deterministic picture operations.
 - [Generation job](examples/generate.json): Quantized FLUX 3 reference edit.
 - [Video generation job](examples/generate-video.json): Local LTX shot with
@@ -22,8 +27,18 @@ Get the authoritative JSON schema with `uv run pic2panning schema`.
 Validate with `uv run pic2panning validate job.json` before execution.
 Run a validated request with `uv run pic2panning run job.json`.
 Call the Python API with the same validated request models when embedding.
-Job kinds are render, edit, generate, generate-video, and mask. Public API
-functions are render, edit, generate, generate_video, mask, and run_job.
+Job kinds are render, scene, camera, edit, generate, generate-video, and mask.
+Public API functions are render, reconstruct_scene, render_camera, edit,
+generate, generate_video, mask, and run_job.
 Image and mask models use the models extra; LTX uses the video extra.
+Scene reconstruction and Gaussian camera rendering use the camera extra.
+Scene requests require source, output (.ply), and metadata (.json), with
+explicit mps or cpu execution and a 1200 to 3600 token budget (default 1800).
+max_edge limits the geometry image to 256 to 4096 pixels on its longest
+edge (default 1920), while retaining the original photo for panning.
+SceneResult returns output, metadata, points, source_sha256, and predictor.
+Camera requests require source, scene, metadata, and output (.mp4). They
+verify source identity before rendering. PLY and calibration can be reused
+for different motion settings. Camera jobs return the ordinary JobResult.
 Generated video is silent. Endpoint guides influence generation without
 promising identical input pixels in the output.

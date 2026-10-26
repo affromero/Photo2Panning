@@ -34,6 +34,15 @@ DOWNLOAD_CHUNK = 1024 * 1024
 DOWNLOAD_LIMIT = 2 * 1024**3
 
 
+def file_sha256(source: str) -> str:
+    """Hash file bytes in bounded chunks before trusting cached artifacts."""
+    result = hashlib.sha256()
+    with cast("BinaryIO", path_open(source, "rb")) as handle:
+        for chunk in iter(lambda: handle.read(DOWNLOAD_CHUNK), b""):
+            result.update(chunk)
+    return result.hexdigest()
+
+
 def is_remote(source: str) -> bool:
     """Recognize HTTP sources without treating local names as URLs."""
     return urlparse(source).scheme in {"http", "https"}

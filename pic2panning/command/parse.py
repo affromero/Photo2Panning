@@ -8,6 +8,7 @@ from typing import Annotated
 
 import tyro
 
+from pic2panning.command.camera import CameraCommand, SceneCommand
 from pic2panning.command.media import EditCommand, RenderCommand
 from pic2panning.command.models import (
     GenerateCommand,
@@ -41,6 +42,8 @@ class InspectCommand(PydanticBaseModel):
 
 type Command = (
     Annotated[RenderCommand, tyro.conf.subcommand(name="render")]
+    | Annotated[CameraCommand, tyro.conf.subcommand(name="camera")]
+    | Annotated[SceneCommand, tyro.conf.subcommand(name="scene")]
     | Annotated[EditCommand, tyro.conf.subcommand(name="edit")]
     | Annotated[GenerateCommand, tyro.conf.subcommand(name="generate")]
     | Annotated[MaskCommand, tyro.conf.subcommand(name="mask")]

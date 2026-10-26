@@ -1,0 +1,18 @@
+{
+  "kind": "camera",
+  "source": "examples/media/waterfall.jpg",
+  "scene": "waterfall.ply",
+  "metadata": "waterfall-scene.json",
+  "output": "waterfall-camera.mp4",
+  "pan_start": 0.32,
+  "pause_at": 0.6,
+  "pan_end": 0.92,
+  "before": 4,
+  "duration": 5,
+  "after": 3.2,
+  "hold": 0.25,
+  "size": {"width": 1080, "height": 1920},
+  "fps": 60,
+  "shutter_angle": 180,
+  "encoding": {"crf": 14, "preset": "slow"}
+}

@@ -7,10 +7,18 @@
 [![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-black?logo=apple)](docs/models.md)
 [![Managed with uv](https://img.shields.io/badge/managed%20with-uv-DE5FE9?logo=uv)](https://docs.astral.sh/uv/)
 
-Turn photos into panning and zooming videos. Reframe footage, change its
+Turn photos into pans, zooms, and 3D camera moves. Reframe footage, change its
 speed, and add music or title cards. Photo2Panning also provides image
 editing and local model tools through a CLI, Python library, and validated
 JSON jobs.
+
+| Photo pan | Zoom and return | Pan, 3D camera, resume |
+| :---: | :---: | :---: |
+| [<img src="examples/media/waterfall-pan.gif" alt="Portrait pan across the waterfall and coastal cliffs" width="180"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.0/waterfall-pan.mp4) | [<img src="examples/media/mountain-zoom.gif" alt="Zoom into the snowy mountains and return to the original view" width="180"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.0/mountain-zoom.mp4) | [<img src="examples/media/waterfall-camera.gif" alt="Complete waterfall pan, pause, 3D camera excursion, return, and resumed pan" width="180"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.0/waterfall-camera.mp4) |
+
+Pan and zoom previews are short excerpts. The camera preview shows the
+complete sequence at 8 fps. Click a result for its full 1080 by 1920,
+60 fps MP4.
 
 [Quick start](#quick-start) · [Demos](#demos) · [Features](#features) ·
 [Python](#python-library) · [LLM tools](#llm-tools-and-json-jobs) ·
@@ -37,40 +45,75 @@ core installation. Try either public photo below.
 
 ### Pan across Múlafossur waterfall
 
-<img src="examples/media/waterfall.jpg" alt="Múlafossur waterfall and coastal cliffs at sunset in the Faroe Islands" width="640"/>
+<img src="examples/media/waterfall.jpg" alt="Original Múlafossur waterfall photo" width="320"/>
 
 [Original photo on Pexels](https://images.pexels.com/photos/29188556/pexels-photo-29188556/free-photo-of-stunning-sunset-over-mulafossur-waterfall-faroe-islands.jpeg).
 
 ```bash
 uv run pic2panning render examples/media/waterfall.jpg \
   --output waterfall-pan.mp4 --motion panning-lr \
-  --duration 5 --size 1080 1920 --fps 30 --crf 16 --preset slow
+  --duration 7.5 --size 1080 1920 --fps 60 \
+  --shutter-angle 180 --crf 16 --preset slow
 ```
 
-https://github.com/user-attachments/assets/c15d7058-7fe2-4b23-a109-6074f607784b
+[Watch the full pan](https://github.com/affromero/Photo2Panning/releases/download/v0.3.0/waterfall-pan.mp4).
 
 ### Zoom into the mountains and return
 
-<img src="examples/media/mountains.jpg" alt="Northern lights over snowy mountains and a fjord" width="640"/>
+<img src="examples/media/mountains.jpg" alt="Original northern lights and snowy mountains photo" width="320"/>
 
 [Original photo on Pexels](https://images.pexels.com/photos/2113566/pexels-photo-2113566.jpeg).
 
 ```bash
 uv run pic2panning render examples/media/mountains.jpg \
   --output mountain-zoom.mp4 --motion zoom-in --zoom 1.5 --reverse \
-  --duration 4 --size 1080 1920 --fps 30 --crf 16 --preset slow
+  --duration 4 --size 1080 1920 --fps 60 \
+  --shutter-angle 180 --crf 16 --preset slow
 ```
 
-https://github.com/user-attachments/assets/087623cb-1381-4924-876e-0637c264f78e
+[Watch the full zoom](https://github.com/affromero/Photo2Panning/releases/download/v0.3.0/mountain-zoom.mp4).
 
 The bundled photos are resized copies of the original public demos and
 follow the [Pexels license](https://www.pexels.com/license/).
+
+### Pan, pause, move a 3D camera, and resume
+
+Install the camera tools and reconstruct a reusable scene from the photo:
+
+```bash
+uv sync --frozen --extra camera
+uv run --extra camera pic2panning scene examples/media/waterfall.jpg \
+  --output waterfall.ply --metadata waterfall-scene.json --max-edge 1920
+
+uv run --extra camera pic2panning camera examples/media/waterfall.jpg \
+  --scene waterfall.ply --metadata waterfall-scene.json \
+  --pause-at 0.6 --before 4 --duration 5 --after 3.2 --hold 0.25 \
+  --output waterfall-camera.mp4 --crf 16 --preset slow
+```
+
+[Watch the full camera sequence](https://github.com/affromero/Photo2Panning/releases/download/v0.3.0/waterfall-camera.mp4).
+
+MoGe-2 predicts metric depth and camera intrinsics locally on MPS. The
+first scene downloads a pinned 1.32 GB checkpoint. The model card declares
+MIT licensing; DINOv2 components use Apache 2.0. See
+[camera models and measured runs](docs/models.md#camera-scenes).
+
+The camera moves through source-colored Gaussian geometry, returns to its
+original pose, and resumes the photo pan. Pans and pause endpoints use the
+original photo; short handoffs blend in linear light. Video compression
+changes output pixels slightly. Inferred depth supports modest moves;
+larger excursions can reveal missing surfaces or soften details.
+
+`--max-edge` limits geometry resolution while retaining the original photo
+for the pans. Reuse the PLY and JSON for later camera renders. The metadata
+binds them to the source photo's checksum.
 
 ## Features
 
 | Tool | Controls |
 | --- | --- |
 | Photo motion | Four pan directions, zoom, return path, slower center motion |
+| 3D camera | Local scene reconstruction, calibrated excursion, return and resumed pan |
 | Video | Crop to a new aspect ratio, bouncing pan, zoom, playback speed |
 | Generated video | Local LTX shot guided by a first and last photo |
 | Audio and titles | Retain source sound, replace or loop music, add title cards |
@@ -168,10 +211,13 @@ Instagram.
 
 ### Edit a picture
 
+<img src="examples/media/waterfall-edit.jpg" alt="Original waterfall photo beside a portrait crop with brighter tones" width="704"/>
+
 ```bash
-uv run pic2panning edit coast.jpg \
-  --output coast-edited.png --crop 80 0 1600 1000 --resize 1280 720 \
-  --brightness 1.1 --contrast 1.05 --saturation 0.9
+uv run pic2panning edit examples/media/waterfall.jpg \
+  --crop 680 0 1640 1280 --resize 450 600 \
+  --brightness 1.12 --contrast 1.08 --saturation 1.1 \
+  --output waterfall-edited.jpg
 ```
 
 Crop coordinates are `left top right bottom` in source pixels. The CLI
@@ -190,8 +236,16 @@ from pic2panning.schemas.media import ImageClip, Motion, RenderRequest
 result = render(
     RenderRequest(
         clips=(
-            ImageClip(source="coast.jpg", duration=5, motion=Motion.PAN_LR),
-            ImageClip(source="forest.jpg", duration=3, motion=Motion.ZOOM_IN),
+            ImageClip(
+                source="examples/media/waterfall.jpg",
+                duration=5,
+                motion=Motion.PAN_LR,
+            ),
+            ImageClip(
+                source="examples/media/mountains.jpg",
+                duration=3,
+                motion=Motion.ZOOM_IN,
+            ),
         ),
         output="trip.mp4",
         size=Size(width=1080, height=1920),
@@ -201,8 +255,9 @@ result = render(
 print(result.model_dump_json(indent=2))
 ```
 
-The public functions are `render`, `edit`, `generate`, `generate_video`,
-`mask`, and `run_job`. Requests validate before processing. Results include
+The public functions are `render`, `reconstruct_scene`, `render_camera`,
+`edit`, `generate`, `generate_video`, `mask`, and `run_job`.
+Requests validate before processing. Results include
 output paths, dimensions, and timing when applicable. Existing outputs
 require `overwrite=True` or `--overwrite`. Input aliases stay protected.
 
@@ -218,7 +273,8 @@ uv run pic2panning validate examples/render.json
 uv run pic2panning run examples/render.json
 ```
 
-A job selects `render`, `edit`, `generate`, `generate-video`, or `mask`
+A job selects `render`, `scene`, `camera`, `edit`, `generate`,
+`generate-video`, or `mask`
 with its `kind` field.
 Unknown fields fail validation. `validate` checks the request without
 reading media or loading models. Commands write JSON results to stdout
@@ -226,6 +282,8 @@ and return a nonzero exit status on failure. Relative paths resolve from
 the process working directory.
 
 Examples: [render](examples/render.json), [image edits](examples/edit.json),
+[scene reconstruction](examples/scene.json),
+[camera timeline](examples/camera.json),
 [image generation](examples/generate.json),
 [video generation](examples/generate-video.json),
 [segmentation](examples/mask.json).
@@ -238,8 +296,8 @@ Install model dependencies separately. Weights download on first use.
 uv sync --frozen --extra models
 
 uv run --extra models pic2panning generate \
-  --source coast.jpg --output coast-evening.png \
-  --prompt "The same rocky coast at dusk, warm light on the cliffs, calm sea, photograph" \
+  --source examples/media/waterfall.jpg --output waterfall-evening.png \
+  --prompt "The same waterfall at dusk, warm light on the cliffs, calm sea, photograph" \
   --model flux3 --quantization 4 --size 512 512 --seed 7
 ```
 
@@ -247,22 +305,21 @@ FLUX 3 Image Klein uses quantized MLX weights on Metal. It supports
 4, 6, and 8-bit weights; the default is 4-bit. Source images are optional
 for generation. Width and height must be multiples of 16.
 
-Grounding DINO Tiny and SAM 2.1 Tiny create masks on the CPU. To remove a
-person from the 1280 by 720 image produced by the editing example:
+Grounding DINO Tiny and SAM 2.1 Tiny create masks on the CPU. This request
+selects the falling water in the original public photo:
 
 ```bash
-uv run --extra models pic2panning mask coast-edited.png \
-  --prompt person --output person-mask.png
-
-uv run --extra models pic2panning generate \
-  --model flux1-fill --source coast-edited.png --mask person-mask.png \
-  --output coast-clear.png --size 1280 720 --quantization 4 --steps 28 \
-  --prompt "An empty rocky coast, matching the surrounding cliffs and sea"
+uv run --extra models pic2panning mask examples/media/waterfall.jpg \
+  --prompt waterfall --device cpu --threshold 0.3 --output waterfall-mask.png
 ```
+
+<img src="examples/media/waterfall-mask.png" alt="Actual waterfall mask: falling water is white, the sky and land are black" width="480"/>
 
 Masks use white for the region to edit and black for the region to retain.
 Source, mask, and output dimensions must match for masked edits. Masks and
 masked edits require PNG. Other image outputs support PNG, JPEG, and WebP.
+Use a mask with `flux1-fill` or FLUX 3; see
+[masked editing controls](docs/models.md#flux-generation-and-editing).
 Some weights require Hugging Face authentication and acceptance of the
 model terms. See [local model setup and measured runs](docs/models.md).
 
@@ -293,18 +350,19 @@ Local input images stay on this Mac. See
 ## Development
 
 ```bash
-uv sync --frozen
-uv run pre-commit install
-uv run pre-commit run --all-files
-uv run mypy
-uv run pytest
+uv sync --frozen --extra camera
+uv run --extra camera pre-commit install
+uv run --extra camera pre-commit run --all-files
+uv run --extra camera mypy
+uv run --extra camera pytest
 uv build
 ```
 
 Ruff checks style and formatting. `ty` checks types at commit time; strict
-mypy also runs in CI. Tests inspect image content and real FFmpeg output.
-Core tests run without model weights. Model execution checks and memory
-measurements are documented in [local models](docs/models.md).
+mypy also runs in CI. The camera dependencies allow both tools to check
+the optional adapters; installing them does not download model weights.
+Tests inspect image content and real FFmpeg output. Model execution checks
+and memory measurements are documented in [local models](docs/models.md).
 
 Demo entry points in [`pic2panning/demos`](pic2panning/demos) use the same
 CLI and processing functions. See [AGENTS.md](AGENTS.md) for contributor

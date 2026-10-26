@@ -12,6 +12,8 @@ API directly.
 - Keep model dependencies in the optional `models` extra and YouTube
   support in the optional `youtube` extra.
 - Keep local generative video dependencies in the optional `video` extra.
+- Keep scene reconstruction and native rendering in the optional `camera`
+  extra.
 - Core imports, CLI help, schema discovery, and validation must work without
   model packages or downloaded weights.
 - Use MLX quantized generation models and small CPU models for
@@ -64,11 +66,11 @@ backend, model, device, or user option silently after failure.
 ## Verification
 
 ```bash
-uv sync --frozen
-uv run pre-commit install
-uv run pre-commit run --all-files
-uv run mypy
-uv run pytest
+uv sync --frozen --extra camera
+uv run --extra camera pre-commit install
+uv run --extra camera pre-commit run --all-files
+uv run --extra camera mypy
+uv run --extra camera pytest
 uv build
 ```
 

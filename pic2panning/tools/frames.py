@@ -1,7 +1,7 @@
 """Compute image and video viewports without retaining rendered frames."""
 
 import math
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 
 import numpy as np
 from PIL import Image
@@ -18,6 +18,42 @@ LINEAR_SRGB = np.array(
     dtype=np.float32,
 )
 LINEAR_SRGB.setflags(write=False)
+
+
+def weighted_linear_blend(
+    samples: Iterable[tuple[Image.Image, float]],
+) -> Image.Image:
+    """Average RGB samples in linear light, closing each consumed image."""
+    linear = None
+    size = None
+    total = 0.0
+    for image, weight in samples:
+        with image:
+            if not math.isfinite(weight) or weight < 0:
+                raise ValueError(
+                    "Image weights must be finite and nonnegative"
+                )
+            if image.mode != "RGB":
+                raise ValueError("Image blending requires RGB samples")
+            if size is not None and size != image.size:
+                raise ValueError("Image samples must share their dimensions")
+            size = image.size
+            sample = LINEAR_SRGB[np.asarray(image)] * weight
+            if linear is None:
+                linear = sample
+            else:
+                linear += sample
+            total += weight
+    if linear is None or total <= 0 or not math.isfinite(total):
+        raise ValueError("Image blending requires a positive total weight")
+    linear /= total
+    srgb = np.where(
+        linear <= 0.0031308,
+        linear * 12.92,
+        1.055 * np.power(np.maximum(linear, 0), 1 / 2.4) - 0.055,
+    )
+    pixels = np.rint(np.clip(srgb * 255, 0, 255)).astype(np.uint8)
+    return Image.fromarray(pixels)
 
 
 def frame_count(duration: float, fps: int) -> int:
@@ -101,26 +137,21 @@ def exposure_frame(
     interval: float,
 ) -> Image.Image:
     """Integrate an RGB exposure in linear light without retaining subframes."""
-    linear = np.zeros((size.height, size.width, 3), dtype=np.float32)
-    for index in range(SHUTTER_SAMPLES):
-        offset = ((index + 0.5) / SHUTTER_SAMPLES - 0.5) * interval
-        sample_progress = min(1.0, max(0.0, progress + offset))
-        if clip.focus_center:
-            sample_progress = center_progress(sample_progress)
-        with transform_frame(
-            image, size, clip.motion, sample_progress, clip.zoom
-        ) as sample:
-            linear += LINEAR_SRGB[np.asarray(sample)]
-    linear /= SHUTTER_SAMPLES
-    srgb = np.where(
-        linear <= 0.0031308,
-        linear * 12.92,
-        1.055 * np.power(linear, 1 / 2.4) - 0.055,
-    )
-    srgb *= 255
-    np.clip(srgb, 0, 255, out=srgb)
-    np.rint(srgb, out=srgb)
-    return Image.fromarray(srgb.astype(np.uint8))
+
+    def samples() -> Iterator[tuple[Image.Image, float]]:
+        for index in range(SHUTTER_SAMPLES):
+            offset = ((index + 0.5) / SHUTTER_SAMPLES - 0.5) * interval
+            sample_progress = min(1.0, max(0.0, progress + offset))
+            if clip.focus_center:
+                sample_progress = center_progress(sample_progress)
+            yield (
+                transform_frame(
+                    image, size, clip.motion, sample_progress, clip.zoom
+                ),
+                1.0,
+            )
+
+    return weighted_linear_blend(samples())
 
 
 def video_frame(

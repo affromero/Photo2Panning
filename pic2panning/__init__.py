@@ -5,10 +5,18 @@ from pic2panning.api import (
     generate,
     generate_video,
     mask,
+    reconstruct_scene,
     render,
+    render_camera,
     run_job,
 )
 from pic2panning.schemas.base import Size
+from pic2panning.schemas.camera import (
+    CameraPose,
+    CameraRequest,
+    SceneCalibration,
+    SceneColorSpace,
+)
 from pic2panning.schemas.editing import (
     Adjust,
     Axis,
@@ -39,6 +47,7 @@ from pic2panning.schemas.models import (
     MaskRequest,
     Quantization,
 )
+from pic2panning.schemas.scene import SceneRequest, SceneResult
 from pic2panning.schemas.video import GenerateVideoRequest
 
 __all__ = [
@@ -47,6 +56,8 @@ __all__ = [
     "Alignment",
     "AudioTrack",
     "Axis",
+    "CameraPose",
+    "CameraRequest",
     "Cover",
     "CoverPosition",
     "Crop",
@@ -68,6 +79,10 @@ __all__ = [
     "RenderRequest",
     "Resize",
     "Rotate",
+    "SceneCalibration",
+    "SceneColorSpace",
+    "SceneRequest",
+    "SceneResult",
     "Size",
     "VideoClip",
     "edit",
@@ -75,6 +90,8 @@ __all__ = [
     "generate_video",
     "job_schema",
     "mask",
+    "reconstruct_scene",
     "render",
+    "render_camera",
     "run_job",
 ]
