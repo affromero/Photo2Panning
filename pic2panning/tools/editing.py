@@ -1,7 +1,11 @@
 """Deterministic image editing shared by Python and JSON callers."""
 
+from contextlib import ExitStack
+
+from klogr.path import get_suffix
 from PIL import Image, ImageEnhance, ImageOps
 
+from pic2panning.errors import MediaError
 from pic2panning.schemas.editing import (
     Adjust,
     Axis,
@@ -42,27 +46,40 @@ def apply_operation(
         case Adjust(
             brightness=brightness, contrast=contrast, saturation=saturation
         ):
-            adjusted = ImageEnhance.Brightness(image).enhance(brightness)
-            adjusted = ImageEnhance.Contrast(adjusted).enhance(contrast)
-            return ImageEnhance.Color(adjusted).enhance(saturation)
+            with (
+                ImageEnhance.Brightness(image).enhance(brightness) as bright,
+                ImageEnhance.Contrast(bright).enhance(contrast) as contrasted,
+            ):
+                return ImageEnhance.Color(contrasted).enhance(saturation)
 
 
 def edit(request: EditRequest) -> JobResult:
     """Apply ordered edits and publish the result without changing the input."""
-    with atomic_output(
-        request.output, [request.source], overwrite=request.overwrite
-    ) as temporary:
-        image = read_image(request.source)
-        try:
-            for operation in request.operations:
-                previous = image
-                image = apply_operation(previous, operation)
-                previous.close()
-            image.save(temporary)
-            return JobResult(
-                outputs=(request.output,),
-                width=image.width,
-                height=image.height,
+    with (
+        ExitStack() as images,
+        atomic_output(
+            request.output, [request.source], overwrite=request.overwrite
+        ) as temporary,
+    ):
+        image = images.enter_context(
+            read_image(request.source, preserve_alpha=True)
+        )
+        for operation in request.operations:
+            previous = image
+            image = images.enter_context(apply_operation(previous, operation))
+            previous.close()
+        suffix = get_suffix(request.output).lower()
+        if image.has_transparency_data and suffix in {
+            ".jpg",
+            ".jpeg",
+        }:
+            raise MediaError(
+                "JPEG cannot preserve image transparency. "
+                "Use PNG or WebP output."
             )
-        finally:
-            image.close()
+        image.save(temporary)
+        return JobResult(
+            outputs=(request.output,),
+            width=image.width,
+            height=image.height,
+        )

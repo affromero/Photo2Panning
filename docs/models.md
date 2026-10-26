@@ -10,11 +10,85 @@ Python 3.14.9 is the supported version. Python 3.15 triggers a reproduced
 native PyTorch crash when worker threads copy tensors to the CPU.
 The project pins 3.14 while that inference path is affected.
 
-Model packages load only when a generation or masking request needs them.
+Model packages load only when their image, mask, or video request needs
+them.
 The first use downloads weights into the normal Hugging Face cache.
 Choose quantized weights and a small image for an initial run. A successful
 package import verifies installation; generating an image also verifies
 that the selected weights and inference path work on the machine.
+
+## First and last frame video
+
+Install the separate video dependencies:
+
+```bash
+uv sync --frozen --extra video
+```
+
+This backend uses the native MLX LTX two-stage pipeline on Apple Silicon.
+The pipeline packages are pinned to upstream Git revision
+`f14dbf930626eafd86b9f29030ac7a23b4e914b8`. Its 0.18 implementation provides
+the joint first/last image conditioning used here; that revision is
+installed directly from Git because the required release is unpublished
+on PyPI.
+
+The default checkpoints are pinned too:
+
+| Component | Checkpoint | Revision |
+| --- | --- | --- |
+| LTX-2.3 q4 | `dgrauet/ltx-2.3-mlx-q4` | `56a5866d638ecfe37c54d348e88938235185c2d4` |
+| Gemma 3 12B 4-bit | `mlx-community/gemma-3-12b-it-4bit` | `86cc6a8dedbc456dd0e4af01a9d09f396f77e558` |
+
+The first default run downloads about 40 GB into the Hugging Face cache.
+Downloads select the LTX components needed by this pipeline and the Gemma
+text encoder. Local input images stay on the Mac. `--weights` and
+`--text-weights` accept compatible local checkpoint directories to use
+instead of downloading the defaults.
+
+```bash
+uv run --extra video pic2panning generate-video \
+  --first-frame examples/media/waterfall.jpg \
+  --last-frame examples/media/mountains.jpg \
+  --output generated.mp4 \
+  --prompt "A continuous camera move across the landscape toward the final view." \
+  --size 576 1024 --frames 65 --fps 24 --steps 20 --refine-steps 3 --seed 0
+```
+
+Both stages receive guides at frame 0 and the last frame. These guides
+influence appearance and motion; generated endpoints can differ from the
+original pixels. Choose overlapping views of the same scene when the goal
+is a continuous camera move. The bundled public photos illustrate the API.
+
+Inputs receive EXIF orientation and a centered crop matching the requested
+aspect ratio. Use `edit` to crop each input before generation when the
+centered framing removes a landmark you need to retain. Both output
+dimensions must be multiples of 64. `frames` must be at least 9 and equal
+`8k + 1`, such as 49, 65, or 97. Frame rate ranges from 1 to 60. Duration
+is the frame count divided by frame rate; 65 frames at 24 fps take about
+2.71 seconds of playback.
+
+Defaults are 576 by 1024, 65 frames, 24 fps, seed 0, 20 first-stage steps,
+and 3 refinement steps. Refinement accepts 1 to 3 steps. An optional
+`--negative-prompt` names unwanted content or motion. `low_memory` defaults
+to true and releases stages promptly. Transformer block streaming stays
+enabled even when `low_memory` is false.
+
+Generation writes a silent MP4. To add sound afterward, use the ordinary
+`render` command with `--video` and `--audio`. Output dimensions, frame
+count, frame rate, duration, and absence of audio are checked before the
+file is published. Inference errors propagate to the caller.
+
+On a 36 GB M3 Max Mac, one local smoke run generated a silent 576 by 1024
+clip with 49 frames at 24 fps (2.042 seconds of playback). It used 20
+first-stage steps and 3 refinement steps and completed in 16 minutes,
+57 seconds. Peak Metal memory was 12.95 GiB; peak physical memory was
+15.6 GiB. Inspection of all 49 frames found a coherent scene with no
+obvious jumps. This single run checks execution and that clip's continuity;
+output quality depends on the input images and prompt.
+
+Sources: [pinned LTX pipeline](https://github.com/dgrauet/ltx-2-mlx/tree/f14dbf930626eafd86b9f29030ac7a23b4e914b8),
+[LTX checkpoint](https://huggingface.co/dgrauet/ltx-2.3-mlx-q4/tree/56a5866d638ecfe37c54d348e88938235185c2d4),
+[Gemma checkpoint](https://huggingface.co/mlx-community/gemma-3-12b-it-4bit/tree/86cc6a8dedbc456dd0e4af01a9d09f396f77e558).
 
 ## FLUX generation and editing
 

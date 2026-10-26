@@ -148,6 +148,15 @@ wheels = [
 ]
 
 [[package]]
+name = "docstring-parser"
+version = "0.18.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/4d/f332313098c1de1b2d2ff91cf2674415cc7cddab2ca1b01ae29774bd5fdf/docstring_parser-0.18.0.tar.gz", hash = "sha256:292510982205c12b1248696f44959db3cdd1740237a968ea1e2e7a900eeb2015", size = 29341, upload-time = "2026-04-14T04:09:19.867Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a7/5f/ed01f9a3cdffbd5a008556fc7b2a08ddb1cc6ace7effa7340604b1d16699/docstring_parser-0.18.0-py3-none-any.whl", hash = "sha256:b3fcbed555c47d8479be0796ef7e19c2670d428d72e96da63f3a40122860374b", size = 22484, upload-time = "2026-04-14T04:09:18.638Z" },
+]
+
+[[package]]
 name = "filelock"
 version = "4.2.4"
 source = { registry = "https://pypi.org/simple" }
@@ -347,6 +356,30 @@ wheels = [
 ]
 
 [[package]]
+name = "ltx-core-mlx"
+version = "0.18.0"
+source = { git = "https://github.com/dgrauet/ltx-2-mlx.git?subdirectory=packages%2Fltx-core-mlx&rev=f14dbf930626eafd86b9f29030ac7a23b4e914b8#f14dbf930626eafd86b9f29030ac7a23b4e914b8" }
+dependencies = [
+    { name = "huggingface-hub", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx-arsenal", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx-lm", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "numpy", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "safetensors", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+
+[[package]]
+name = "ltx-pipelines-mlx"
+version = "0.18.0"
+source = { git = "https://github.com/dgrauet/ltx-2-mlx.git?subdirectory=packages%2Fltx-pipelines-mlx&rev=f14dbf930626eafd86b9f29030ac7a23b4e914b8#f14dbf930626eafd86b9f29030ac7a23b4e914b8" }
+dependencies = [
+    { name = "ltx-core-mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx-arsenal", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "pillow", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "tqdm", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "4.2.0"
 source = { registry = "https://pypi.org/simple" }
@@ -450,6 +483,37 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/e3/7c/c90d57df7775421fe43f7a235f6cee85a67c4aecc7325051b23fff58335b/mlx-0.32.4-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:f6cbda9cb8c33c9f8673a2b69fb19bdab75b5032d4e47a42a0e7b36db1c3ebcc", size = 692106, upload-time = "2026-10-14T21:16:50.019Z" },
     { url = "https://files.pythonhosted.org/packages/6e/07/90e629a9667ec35b2aa8c84e0e096ff36fdd58731dc9d182f5ee59a488d0/mlx-0.32.4-cp314-cp314t-macosx_15_0_arm64.whl", hash = "sha256:4f95afac25431585b34846d472ea0ad5db83fc97fb014d62c70082456f6b6b5c", size = 692107, upload-time = "2026-10-14T21:16:51.978Z" },
     { url = "https://files.pythonhosted.org/packages/d0/20/bdb26b961fc8f0d54e6b36dd5360449f0cf8591d14cee10470c14ce1e154/mlx-0.32.4-cp314-cp314t-macosx_26_0_arm64.whl", hash = "sha256:63ac6fde8a55d688448fc25eb32b645276501e0a30ff961a72958dfd0a4065df", size = 692103, upload-time = "2026-10-14T21:16:53.963Z" },
+]
+
+[[package]]
+name = "mlx-arsenal"
+version = "0.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "numpy", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2f/7a/15f34f262198894276d023c4178e0c0d74a37f7d09f32b3e9aa7f9eca69a/mlx_arsenal-0.17.0.tar.gz", hash = "sha256:2b974578e373806c09c7e048408b165ad0861c75bc371a39db91ab0be4060747", size = 207639, upload-time = "2026-10-22T12:10:38.336Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/54/72/79a65c9de8507c1583258549ab4fc57c7f146a8d7b6643acc6fb7225d186/mlx_arsenal-0.17.0-py3-none-any.whl", hash = "sha256:378ae9547d8ed4a60bf53e04d3c051bfb2a2339bc458f115dec7e4da81f3b96d", size = 140559, upload-time = "2026-10-22T12:10:36.627Z" },
+]
+
+[[package]]
+name = "mlx-lm"
+version = "0.32.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jinja2", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "numpy", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "protobuf", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "pyyaml", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "sentencepiece", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "transformers", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e1/46/eff1c17019b82912020d4d716527e6fcf4ac392b55cddef03eeb60566ab4/mlx_lm-0.32.2.tar.gz", hash = "sha256:1af8a92f6a141c3e2bf5b0369ac4464203a8e2189c47b9e40d3e921e5b3a1fe9", size = 449827, upload-time = "2026-10-16T02:49:34.781Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/4f/000eefdeb41388782b47e7f39904cf2d9e7e49a60df5e172097c358dba8e/mlx_lm-0.32.2-py3-none-any.whl", hash = "sha256:5c0991248cfff5872503d74f466d2532dd8cb7fb3670cb9be7a06d7305dadc04", size = 546040, upload-time = "2026-10-16T02:49:33.32Z" },
 ]
 
 [[package]]
@@ -574,8 +638,10 @@ version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "klogr", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "numpy", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "pillow", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "pydantic", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "tyro", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
 ]
 
 [package.optional-dependencies]
@@ -583,9 +649,12 @@ models = [
     { name = "beartype", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "jaxtyping", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "mflux", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
-    { name = "numpy", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "torch", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
     { name = "torchvision", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+video = [
+    { name = "ltx-core-mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "ltx-pipelines-mlx", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
 ]
 youtube = [
     { name = "yt-dlp", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
@@ -606,15 +675,18 @@ requires-dist = [
     { name = "beartype", marker = "extra == 'models'", specifier = ">=0.23.1" },
     { name = "jaxtyping", marker = "extra == 'models'", specifier = ">=0.3.3" },
     { name = "klogr", specifier = ">=0.2.1" },
+    { name = "ltx-core-mlx", marker = "extra == 'video'", git = "https://github.com/dgrauet/ltx-2-mlx.git?subdirectory=packages%2Fltx-core-mlx&rev=f14dbf930626eafd86b9f29030ac7a23b4e914b8" },
+    { name = "ltx-pipelines-mlx", marker = "extra == 'video'", git = "https://github.com/dgrauet/ltx-2-mlx.git?subdirectory=packages%2Fltx-pipelines-mlx&rev=f14dbf930626eafd86b9f29030ac7a23b4e914b8" },
     { name = "mflux", marker = "extra == 'models'", specifier = "==0.23.0" },
-    { name = "numpy", marker = "extra == 'models'", specifier = ">=2.5.4" },
+    { name = "numpy", specifier = ">=2.5.4" },
     { name = "pillow", specifier = ">=12.3.0,<13" },
     { name = "pydantic", specifier = ">=2.14.1" },
     { name = "torch", marker = "extra == 'models'", specifier = ">=2.14.1", index = "https://download.pytorch.org/whl/cpu" },
     { name = "torchvision", marker = "extra == 'models'", specifier = ">=0.29.1", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "tyro", specifier = "==1.0.16" },
     { name = "yt-dlp", marker = "extra == 'youtube'", specifier = ">=2026.10.21" },
 ]
-provides-extras = ["models", "youtube"]
+provides-extras = ["models", "youtube", "video"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1022,6 +1094,18 @@ wheels = [
 ]
 
 [[package]]
+name = "typeguard"
+version = "4.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b4/de/4420db493fa8fc0856d5e5c1b159c63a323d2de2317babe36b01568928e8/typeguard-4.6.0.tar.gz", hash = "sha256:e7414f09111317de3e335de92cd397c5c0ca00b1cc1676de12e1d444a79b3f21", size = 82330, upload-time = "2026-07-26T08:40:23.207Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/eb/461d5f167b6f5c7d97696f397c82f82e3480e003fce3f0a1cd1dd26e2eb2/typeguard-4.6.0-py3-none-any.whl", hash = "sha256:79878165bb86f2cf5d41d159a0ff1792a796cf496882d2fe1b1c6c7049b9cdd7", size = 36884, upload-time = "2026-07-26T08:40:21.868Z" },
+]
+
+[[package]]
 name = "typer"
 version = "0.27.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1054,6 +1138,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/a3/26/b09b8010994eccc3c09092e6b34058f36a460eea2d4c3e8b910c695975a0/typing_inspection-0.4.4.tar.gz", hash = "sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47", size = 76928, upload-time = "2026-08-12T12:37:25.997Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl", hash = "sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147", size = 14750, upload-time = "2026-08-12T12:37:24.648Z" },
+]
+
+[[package]]
+name = "tyro"
+version = "1.0.16"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "docstring-parser", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "typeguard", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+    { name = "typing-extensions", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3c/83/4008dff806dc894fc0422017316982d3f14709046bcb0dfa720cb64501aa/tyro-1.0.16.tar.gz", hash = "sha256:edf23c9c3eecba5a2b5af152df8f34a723b689a001ff5b7311f93eff1893a636", size = 603382, upload-time = "2026-08-23T01:19:26.643Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/23/d9/ea12ca0392c9eaeff7421efcc665f350dbc2ef30a113ee13c7afea21cf37/tyro-1.0.16-py3-none-any.whl", hash = "sha256:2f9087196113699647190459a12b6b4f2784dd0703c50ab1f7bf0f85a3a794ea", size = 216925, upload-time = "2026-08-23T01:19:25.168Z" },
 ]
 
 [[package]]

@@ -4,10 +4,12 @@ import io
 import os
 import subprocess
 from collections.abc import Sequence
+from gzip import compress
 from pathlib import Path
 from typing import override
 
 import pytest
+from PIL import Image
 
 from pic2panning.errors import MediaError
 from pic2panning.tools import io as media_io
@@ -218,6 +220,118 @@ def test_partial_network_timeout_removes_incomplete_download(
     with pytest.raises(TimeoutError, match="partial download"):
         media_io.materialize("https://example.test/photo.png", str(tmp_path))
     assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("declared_length", [1, 100])
+def test_download_size_mismatch_removes_incomplete_content(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    declared_length: int,
+) -> None:
+    """A successful HTTP status cannot hide an incomplete response body."""
+
+    def mismatched(source: str, *, timeout: float) -> DownloadResponse:
+        if not source or timeout <= 0:
+            raise ValueError("Expected a bounded media request")
+        response = DownloadResponse(b"received media bytes")
+        response.headers["Content-Length"] = str(declared_length)
+        return response
+
+    monkeypatch.setattr(media_io, "urlopen", mismatched)
+    with pytest.raises(MediaError, match="Content-Length"):
+        media_io.materialize("https://example.test/photo.png", str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
+
+
+@pytest.mark.parametrize("chunked", [False, True])
+def test_download_without_a_reliable_length_retains_all_content(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    chunked: bool,
+) -> None:
+    """Unknown lengths and dechunked bodies need no declared byte count."""
+    body = b"complete media bytes"
+
+    def unbounded(source: str, *, timeout: float) -> DownloadResponse:
+        if not source or timeout <= 0:
+            raise ValueError("Expected a bounded media request")
+        response = DownloadResponse(body)
+        response.headers = (
+            {"Transfer-Encoding": "chunked", "Content-Length": "100"}
+            if chunked
+            else {}
+        )
+        return response
+
+    monkeypatch.setattr(media_io, "urlopen", unbounded)
+    output = media_io.materialize(
+        "https://example.test/photo.png", str(tmp_path)
+    )
+    assert Path(output).read_bytes() == body
+
+
+def test_download_compares_compressed_body_bytes_with_content_length(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """HTTP content encoding does not change urllib's raw response bytes."""
+    body = compress(b"media bytes" * 100)
+
+    def compressed(source: str, *, timeout: float) -> DownloadResponse:
+        if not source or timeout <= 0:
+            raise ValueError("Expected a bounded media request")
+        response = DownloadResponse(body)
+        response.headers["Content-Encoding"] = "gzip"
+        return response
+
+    monkeypatch.setattr(media_io, "urlopen", compressed)
+    output = media_io.materialize(
+        "https://example.test/photo.png", str(tmp_path)
+    )
+    assert Path(output).read_bytes() == body
+
+
+def test_download_rejects_a_declared_body_over_the_input_limit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Oversized media is rejected before a partial download can remain."""
+
+    def oversized(source: str, *, timeout: float) -> DownloadResponse:
+        if not source or timeout <= 0:
+            raise ValueError("Expected a bounded media request")
+        response = DownloadResponse(b"media prefix")
+        response.headers["Content-Length"] = str(2 * 1024**3 + 1)
+        return response
+
+    monkeypatch.setattr(media_io, "urlopen", oversized)
+    with pytest.raises(MediaError, match="input limit"):
+        media_io.materialize("https://example.test/photo.png", str(tmp_path))
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_image_loading_keeps_rgb_default_and_optional_oriented_alpha(
+    tmp_path: Path,
+) -> None:
+    """Editing can retain alpha without changing the RGB media contract."""
+    source = tmp_path / "oriented.png"
+    with Image.new("RGBA", (2, 1), (10, 20, 30, 0)) as image:
+        image.putpixel((1, 0), (40, 50, 60, 128))
+        exif = Image.Exif()
+        exif[274] = 6
+        image.save(source, exif=exif)
+    with (
+        media_io.read_image(str(source)) as rgb,
+        media_io.read_image(str(source), preserve_alpha=True) as rgba,
+    ):
+        assert rgb.mode == "RGB"
+        assert rgb.size == (1, 2)
+        assert rgb.getpixel((0, 1)) == (40, 50, 60)
+        assert rgba.mode == "RGBA"
+        assert rgba.size == (1, 2)
+        assert rgba.getpixel((0, 0)) == (10, 20, 30, 0)
+        assert rgba.getpixel((0, 1)) == (40, 50, 60, 128)
 
 
 def test_different_youtube_sources_keep_their_own_audio(

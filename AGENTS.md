@@ -11,6 +11,7 @@ API directly.
 - Use `uv sync` and `uv lock` for dependencies. Commit the lockfile.
 - Keep model dependencies in the optional `models` extra and YouTube
   support in the optional `youtube` extra.
+- Keep local generative video dependencies in the optional `video` extra.
 - Core imports, CLI help, schema discovery, and validation must work without
   model packages or downloaded weights.
 - Use MLX quantized generation models and small CPU models for
@@ -34,6 +35,8 @@ Update examples and the tool guide when request semantics change.
 
 - Use the project's Pydantic base, with explicit fields and validation.
 - Fully annotate functions. Use absolute imports.
+- Use tyro for CLI interfaces. Keep CLI command models typed and separate
+  from processing functions.
 - Use `klogr` for logging and path helpers.
 - Keep 79-character formatting, at most 1000 lines per source file, and at
   most 10 Python or shell files per directory.

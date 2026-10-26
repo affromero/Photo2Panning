@@ -12,6 +12,7 @@ the runtime schemas.
 | `render` | Photo pan or zoom, video reframing, speed, music, title cards | `render` |
 | `edit` | Crop, resize, rotate, flip, brightness, contrast, saturation | `edit` |
 | `generate` | Prompted generation, reference-image editing, masked fill | `generate` |
+| `generate-video` | One local shot guided by first and last image inputs | `generate_video` |
 | `mask` | Find objects from text and produce segmentation masks | `mask` |
 
 Inspect the current contract before constructing a job:
@@ -44,7 +45,8 @@ every size. Choose portrait output with `{"width": 1080, "height": 1920}`.
   ],
   "output": "coast.mp4",
   "size": {"width": 1080, "height": 1920},
-  "fps": 30
+  "fps": 30,
+  "encoding": {"crf": 16, "preset": "slow"}
 }
 ```
 
@@ -54,6 +56,30 @@ each clip. `reverse` adds a return trip after the forward motion.
 zoom factor, defaulting to `4/3`. A video clip's `pan_speed` is pixels per
 output frame; the camera bounces when it reaches an edge. CLI `--duration`
 applies to images and `--pan-speed` applies to videos.
+
+Image clips accept `shutter_angle` from 0 to 360 degrees. The default `0`
+samples one instant per frame. A value of `180` integrates eight subframe
+samples across half a frame interval, in linear light. This softens detail
+along the motion direction to reduce strobing during fast pans, with extra render
+cost. The first and last frames remain sharp at their exact endpoints.
+Exposure samples follow the clip's `focus_center` curve when enabled.
+
+The CLI exposes this as `--shutter-angle` and rejects nonzero values with
+`--video`. Frame rate and duration remain explicit controls: increasing
+`fps` or slowing the pan with a longer `duration` reduces movement between
+frames. Appearance depends on scene detail, pan speed, and playback display.
+For a slower photo pan, choose `duration: 7.5`, `fps: 60`, and
+`shutter_angle: 180` explicitly.
+
+`encoding` selects H.264 quality. `crf` ranges from 0 to 51; lower values
+retain more detail and produce larger files. Its default is 18. `preset`
+accepts `veryfast`, `fast`, `medium`, `slow`, or `veryslow` and defaults to
+`veryfast`. The CLI exposes these fields as `--crf` and `--preset`.
+
+MP4 dimensions must be even. GIF output requires an explicit `fps` from
+`1`, `2`, `4`, `5`, `10`, `20`, `25`, `50`, or `100`, so frame delays fit
+GIF's centisecond clock. GIFs cannot contain replacement audio. Source
+video rotation and pixel aspect ratio are applied before reframing.
 
 Edit requests apply `operations` in order. Every operation selects itself
 with `op`. Use a crop before resize when crop coordinates refer to source
@@ -73,7 +99,8 @@ Unspecified adjustment factors remain at `1`.
 }
 ```
 
-Generation and masking need the `models` extra. See
+Image generation and masking need the `models` extra. Video generation
+needs the separate `video` extra. See
 [local models](models.md) before selecting a model or changing model
 controls. An edit prompt should describe the complete target scene. Use
 `edit` for geometric changes that need exact pixel behavior.
@@ -81,13 +108,55 @@ controls. An edit prompt should describe the complete target scene. Use
 Generation uses quantized MLX models on Metal. Mask requests use the small
 CPU models; the only supported `device` value is `cpu`.
 
-For generation, omit `steps` to choose 16 for FLUX 3, 4 for Schnell, or 28
-for Dev and Fill. Default guidance is 3.5 for Dev and 30 for Fill. FLUX 3
+For image generation, omit `steps` to choose 16 for FLUX 3, 4 for Schnell,
+or 28 for Dev and Fill. Default guidance is 3.5 for Dev and 30 for Fill. FLUX 3
 and Schnell reject guidance controls. Explicit steps override the default.
 
 Image outputs support PNG, JPEG, and WebP. Masks and masked edits require
 PNG so their pixel values remain lossless. Unsupported output suffixes
 fail request validation before model weights load.
+
+### Generate video from first and last frames
+
+`generate-video` uses the local MLX LTX pipeline. Both stages receive a
+guide at frame 0 and another at `frames - 1`. Generated endpoints can
+differ from the input pixels. Prefer overlapping views of the same scene
+for continuous camera movement.
+
+```json
+{
+  "kind": "generate-video",
+  "first_frame": "examples/media/waterfall.jpg",
+  "last_frame": "examples/media/mountains.jpg",
+  "output": "generated.mp4",
+  "prompt": "A continuous camera move across the landscape toward the final view.",
+  "size": {"width": 576, "height": 1024},
+  "frames": 65,
+  "fps": 24,
+  "steps": 20,
+  "refine_steps": 3,
+  "seed": 0,
+  "low_memory": true
+}
+```
+
+Input images receive EXIF orientation and a centered crop to fit. Use
+`EditRequest` first for another crop. Width and height must be multiples
+of 64. Frame count must be at least 9 and equal `8k + 1`; frame rate must
+be between 1 and 60. Duration equals `frames / fps`.
+
+Defaults are 576 by 1024, 65 frames, 24 fps, 20 first-stage steps, 3
+refinement steps, seed 0, and `low_memory: true`. Refinement accepts 1 to
+3 steps. Transformer block streaming stays enabled independently of
+`low_memory`. `negative_prompt` is optional. `weights` and `text_weights`
+accept compatible local checkpoint directories; omit them to use the
+pinned public defaults. The first default download is about 40 GB.
+
+The output is a silent MP4. Add a soundtrack in a separate `render` job
+using that output as a video clip. Generated media must match the
+requested dimensions, frame count, frame rate, and duration before it is
+published. See [local video setup](models.md#first-and-last-frame-video)
+and the [complete job example](../examples/generate-video.json).
 
 ## Validate, then execute
 
@@ -133,7 +202,9 @@ It includes title cards. A clip's own `audio` replaces sound for that clip.
 Use one replacement policy per job. A video retains its original sound by
 default; `keep_audio: false` silences that clip.
 
-`start` selects an offset in seconds. `loop: true` repeats the soundtrack
-to cover its timeline. Without looping, unused time is silent. Video speed
-changes preserve audio pitch. Cover duration stays independent of speed.
-Frame counts determine the encoded duration at the requested frame rate.
+`start` selects an offset in seconds. `loop: true` repeats the selected
+audio from that offset to its end, excluding the skipped prefix from every
+cycle. An offset at or beyond the source duration fails during execution.
+Without looping, unused time is silent. Video speed changes preserve audio
+pitch. Cover duration stays independent of speed. Frame counts determine
+the encoded duration at the requested frame rate.

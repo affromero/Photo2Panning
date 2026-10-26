@@ -42,6 +42,26 @@ class Alignment(StrEnum):
     RIGHT = "right"
 
 
+class EncodingPreset(StrEnum):
+    """H.264 compression effort; slower presets improve compression."""
+
+    VERYFAST = "veryfast"
+    FAST = "fast"
+    MEDIUM = "medium"
+    SLOW = "slow"
+    VERYSLOW = "veryslow"
+
+
+class Encoding(PydanticBaseModel):
+    """Explicit H.264 export quality."""
+
+    crf: Annotated[int, Field(ge=0, le=51, strict=True)] = 18
+    """Constant rate factor; lower values retain more detail and use more space."""
+
+    preset: EncodingPreset = EncodingPreset.VERYFAST
+    """Compression effort; slow is useful for a final high-quality export."""
+
+
 class AudioTrack(PydanticBaseModel):
     """Audio starts at an offset; short tracks pad with silence or loop."""
 
@@ -75,6 +95,9 @@ class ImageClip(PydanticBaseModel):
 
     focus_center: bool = False
     """Slow movement around the center while retaining both endpoints."""
+
+    shutter_angle: Annotated[float, Field(ge=0, le=360)] = 0
+    """Motion exposure in degrees; 180 integrates half a frame of movement."""
 
     zoom: Annotated[float, Field(gt=1, allow_inf_nan=False)] = 4 / 3
     """Magnification at the closest zoom endpoint; used by zoom motions."""
@@ -173,6 +196,9 @@ class RenderRequest(PydanticBaseModel):
     overwrite: bool = False
     """Allow replacing an existing output; input aliases stay protected."""
 
+    encoding: Encoding = Encoding()
+    """H.264 quality and compression effort for MP4 exports."""
+
     @model_validator(mode="after")
     def validate_output(self) -> Self:
         """Reject incompatible output dimensions and ambiguous audio."""
@@ -187,4 +213,18 @@ class RenderRequest(PydanticBaseModel):
             self.audio or any(c.audio for c in self.clips)
         ):
             raise ValueError("GIF cannot contain audio")
+        if suffix == ".gif" and self.fps not in {
+            1,
+            2,
+            4,
+            5,
+            10,
+            20,
+            25,
+            50,
+            100,
+        }:
+            raise ValueError(
+                "GIF fps must divide 100 exactly: 1, 2, 4, 5, 10, 20, 25, 50, or 100"
+            )
         return self

@@ -63,7 +63,18 @@ def materialize(source: str, directory: str) -> str:
             if response.status != 200:
                 raise MediaError(f"HTTP {response.status} for {source}")
             length = response.headers.get("Content-Length")
-            if length and int(length) > DOWNLOAD_LIMIT:
+            chunked = "chunked" in {
+                coding.strip().lower()
+                for coding in response.headers.get(
+                    "Transfer-Encoding", ""
+                ).split(",")
+            }
+            expected = (
+                int(length) if length is not None and not chunked else None
+            )
+            if expected is not None and expected < 0:
+                raise MediaError("HTTP Content-Length must be nonnegative")
+            if expected is not None and expected > DOWNLOAD_LIMIT:
                 raise MediaError("Download exceeds the 2 GiB input limit")
             with cast("BinaryIO", path_open(target, "wb")) as destination:
                 total = 0
@@ -74,21 +85,32 @@ def materialize(source: str, directory: str) -> str:
                             "Download exceeds the 2 GiB input limit"
                         )
                     destination.write(chunk)
+                if expected is not None and total != expected:
+                    raise MediaError(
+                        "HTTP Content-Length mismatch: "
+                        f"expected {expected} bytes, received {total}"
+                    )
     except BaseException:
         path_remove(target, non_exist_ok=True)
         raise
     return target
 
 
-def read_image(source: str) -> Image.Image:
-    """Read a detached RGB image with EXIF orientation applied."""
+def read_image(source: str, *, preserve_alpha: bool = False) -> Image.Image:
+    """Read an oriented RGB image, retaining transparency when requested."""
     with tempfile.TemporaryDirectory(prefix="pic2panning-image-") as directory:
         local = materialize(source, directory)
         with (
             cast("BinaryIO", path_open(local, "rb")) as handle,
             Image.open(handle) as image,
+            ImageOps.exif_transpose(image) as oriented,
         ):
-            return ImageOps.exif_transpose(image).convert("RGB")
+            mode = (
+                "RGBA"
+                if preserve_alpha and oriented.has_transparency_data
+                else "RGB"
+            )
+            return oriented.convert(mode)
 
 
 def validate_destination(

@@ -37,7 +37,11 @@ def generate(
         for lora in request.loras:
             require_file(lora.path)
         image = (
-            images.enter_context(read_image(request.source))
+            images.enter_context(
+                read_image(
+                    request.source, preserve_alpha=request.mask is not None
+                )
+            )
             if request.source
             else None
         )
@@ -68,15 +72,22 @@ def generate(
             )
             raise MediaError(message)
         selected = backend if backend is not None else MfluxBackend()
+        reference = (
+            images.enter_context(image.convert("RGB"))
+            if image is not None and image.mode != "RGB"
+            else image
+        )
         generated = images.enter_context(
             images.enter_context(
-                selected.generate(request, image, mask_image)
+                selected.generate(request, reference, mask_image)
             ).convert("RGB")
         )
         if generated.size != request.size.as_tuple:
             message = "The model returned an image with unexpected dimensions."
             raise MediaError(message)
         if mask_image is not None and image is not None:
+            if image.mode != generated.mode:
+                generated = images.enter_context(generated.convert(image.mode))
             generated = images.enter_context(
                 Image.composite(generated, image, mask_image)
             )

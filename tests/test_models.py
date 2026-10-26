@@ -27,6 +27,8 @@ class SolidImageBackend(ImageBackend):
         mask: Image.Image | None,
     ) -> Image.Image:
         """Return the requested dimensions for output verification."""
+        if image is not None and image.mode != "RGB":
+            raise ValueError("Model reference images must use RGB")
         return Image.new("RGB", request.size.as_tuple, "red")
 
 
@@ -125,6 +127,54 @@ def test_masked_edit_preserves_every_unselected_pixel(tmp_path: Path) -> None:
     with Image.open(output) as image:
         assert image.getpixel((0, 0)) == (255, 0, 0)
         assert image.getpixel((31, 15)) == (0, 0, 255)
+    assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("mode", ["RGBA", "P"])
+@pytest.mark.parametrize("select_half", [False, True])
+def test_masked_edit_retains_unselected_transparency_and_color(
+    tmp_path: Path, mode: str, *, select_half: bool
+) -> None:
+    """Black masks retain every RGBA channel, including palette alpha."""
+    source = tmp_path / "source.png"
+    selection = tmp_path / "mask.png"
+    output = tmp_path / "edited.png"
+    with Image.new(mode, (32, 16)) as image:
+        if mode == "P":
+            image.putpalette([10, 20, 30, 40, 50, 60])
+            image.info["transparency"] = bytes([0, 128])
+            image.putpixel((31, 15), 1)
+        else:
+            image.paste((10, 20, 30, 0), (0, 0, 32, 16))
+            image.putpixel((31, 15), (40, 50, 60, 128))
+        image.save(source)
+    with Image.new("L", (32, 16)) as selected:
+        if select_half:
+            selected.paste(255, (0, 0, 16, 16))
+        selected.save(selection)
+    original = source.read_bytes()
+    generate(
+        GenerateRequest(
+            source=str(source),
+            mask=str(selection),
+            output=str(output),
+            prompt="Make selected pixels red",
+            size=Size(width=32, height=16),
+        ),
+        SolidImageBackend(),
+    )
+    with Image.open(output) as image:
+        assert image.mode == "RGBA"
+        assert image.getpixel((31, 15)) == (40, 50, 60, 128)
+        assert image.getpixel((16, 0)) == (10, 20, 30, 0)
+        if select_half:
+            assert image.getpixel((0, 0)) == (255, 0, 0, 255)
+        else:
+            with (
+                Image.open(source) as original_image,
+                original_image.convert("RGBA") as rgba,
+            ):
+                assert image.tobytes() == rgba.tobytes()
     assert source.read_bytes() == original
 
 

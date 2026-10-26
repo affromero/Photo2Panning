@@ -112,6 +112,7 @@ def render_clip(
                 raw_path,
                 request.size,
                 request.fps,
+                request.encoding,
             )
     else:
         original = materialize(clip.source, directory)
@@ -121,7 +122,9 @@ def render_clip(
                 original, info, clip, request.size, request.fps
             )
         ) as frames:
-            count = encode_frames(frames, raw_path, request.size, request.fps)
+            count = encode_frames(
+                frames, raw_path, request.size, request.fps, request.encoding
+            )
     duration = count / request.fps
     preserve = (
         isinstance(clip, VideoClip)
@@ -155,7 +158,11 @@ def render_cover(request: RenderRequest, directory: str) -> tuple[str, int]:
     count = frame_count(cover.duration, request.fps)
     with title_card(cover, request.size) as image:
         encode_frames(
-            repeated_frames(image, count), raw_path, request.size, request.fps
+            repeated_frames(image, count),
+            raw_path,
+            request.size,
+            request.fps,
+            request.encoding,
         )
     normalize_audio(raw_path, final_path, count / request.fps)
     return final_path, count

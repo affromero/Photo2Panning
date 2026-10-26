@@ -33,6 +33,8 @@ jobs:
           enable-cache: true
       - run: uv sync --frozen --all-extras
       - name: Verify Metal and model dependencies without downloading weights
-        run: uv run --all-extras python -c 'import mlx.core, torch, torchvision, transformers; from mflux.models.flux3.variants import Flux3Klein, Flux3KleinEdit; from mflux.models.flux.variants.txt2img.flux import Flux1; from mflux.models.flux.variants.fill.flux_fill import Flux1Fill'
+        run: uv run --all-extras python -c 'import mlx.core, torch, torchvision, transformers; from mflux.models.flux3.variants import Flux3Klein, Flux3KleinEdit; from mflux.models.flux.variants.txt2img.flux import Flux1; from mflux.models.flux.variants.fill.flux_fill import Flux1Fill; from ltx_pipelines_mlx import TI2VidTwoStagesPipeline'
+      - name: Verify model adapter contracts without weights
+        run: uv run --all-extras pytest -q tests/test_model_adapters.py tests/test_video_generation.py
       - name: Verify optional model runtime in a background worker
         run: PIC2PANNING_TEST_MODELS=1 uv run --all-extras pytest -q tests/test_models.py

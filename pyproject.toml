@@ -10,11 +10,15 @@ readme = "readme.md"
 requires-python = ">=3.14,<3.15"
 license = "MIT"
 authors = [{name = "Andres Romero", email = "me@afromero.co"}]
-dependencies = ["klogr>=0.2.1", "pillow>=12.3.0,<13", "pydantic>=2.14.1"]
+dependencies = ["klogr>=0.2.1", "numpy>=2.5.4", "pillow>=12.3.0,<13", "pydantic>=2.14.1", "tyro==1.0.16"]
 
 [project.optional-dependencies]
-models = ["beartype>=0.23.1", "jaxtyping>=0.3.3", "mflux==0.23.0", "numpy>=2.5.4", "torch>=2.14.1", "torchvision>=0.29.1"]
+models = ["beartype>=0.23.1", "jaxtyping>=0.3.3", "mflux==0.23.0", "torch>=2.14.1", "torchvision>=0.29.1"]
 youtube = ["yt-dlp>=2026.10.21"]
+video = [
+  "ltx-core-mlx @ git+https://github.com/dgrauet/ltx-2-mlx.git@f14dbf930626eafd86b9f29030ac7a23b4e914b8#subdirectory=packages/ltx-core-mlx",
+  "ltx-pipelines-mlx @ git+https://github.com/dgrauet/ltx-2-mlx.git@f14dbf930626eafd86b9f29030ac7a23b4e914b8#subdirectory=packages/ltx-pipelines-mlx",
+]
 
 [project.scripts]
 pic2panning = "pic2panning.cli:main"
@@ -27,6 +31,9 @@ dev = ["mypy>=2.4.0", "pre-commit>=4.7.0", "pytest>=9.1.1", "pytest-cov>=7.1.0",
 
 [tool.hatch.build.targets.wheel]
 packages = ["pic2panning"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.uv]
 required-version = ">=0.11.17"
@@ -45,7 +52,7 @@ torchvision = {index = "pytorch-cpu"}
 strict = true
 python_version = "3.14"
 plugins = ["pydantic.mypy"]
-files = ["pic2panning", "tests", "scripts"]
+files = ["pic2panning", "tests", "scripts", "examples"]
 warn_unreachable = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 
@@ -64,4 +71,4 @@ source = ["pic2panning"]
 branch = true
 
 [tool.ty.src]
-include = ["pic2panning", "tests", "scripts"]
+include = ["pic2panning", "tests", "scripts", "examples"]

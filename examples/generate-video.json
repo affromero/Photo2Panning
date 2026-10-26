@@ -1,0 +1,14 @@
+{
+  "kind": "generate-video",
+  "first_frame": "examples/media/waterfall.jpg",
+  "last_frame": "examples/media/mountains.jpg",
+  "output": "generated.mp4",
+  "prompt": "A continuous camera move across the landscape toward the final view.",
+  "size": {"width": 576, "height": 1024},
+  "frames": 65,
+  "fps": 24,
+  "steps": 20,
+  "refine_steps": 3,
+  "seed": 0,
+  "low_memory": true
+}

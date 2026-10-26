@@ -8,9 +8,14 @@ from pic2panning.schemas.base import PydanticBaseModel
 from pic2panning.schemas.editing import EditRequest
 from pic2panning.schemas.media import RenderRequest
 from pic2panning.schemas.models import GenerateRequest, MaskRequest
+from pic2panning.schemas.video import GenerateVideoRequest
 
 type Job = Annotated[
-    RenderRequest | EditRequest | GenerateRequest | MaskRequest,
+    RenderRequest
+    | EditRequest
+    | GenerateRequest
+    | MaskRequest
+    | GenerateVideoRequest,
     Field(discriminator="kind"),
 ]
 

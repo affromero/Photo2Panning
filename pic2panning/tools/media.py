@@ -4,8 +4,9 @@ import math
 import shutil
 import subprocess
 import tempfile
+import wave
 from collections.abc import Generator, Iterable, Sequence
-from contextlib import suppress
+from contextlib import contextmanager, suppress
 from fractions import Fraction
 from typing import BinaryIO
 
@@ -14,7 +15,7 @@ from PIL import Image
 
 from pic2panning.errors import DependencyError, MediaError
 from pic2panning.schemas.base import PydanticBaseModel, Size
-from pic2panning.schemas.media import AudioTrack
+from pic2panning.schemas.media import AudioTrack, Encoding
 
 COMMAND_TIMEOUT = 300
 
@@ -32,6 +33,7 @@ class StreamInfo(PydanticBaseModel):
     width: int | None = None
     height: int | None = None
     avg_frame_rate: str = "0/0"
+    sample_aspect_ratio: str | None = None
     nb_frames: str | None = None
     duration: str | None = None
     side_data_list: tuple[Rotation, ...] = ()
@@ -104,8 +106,8 @@ def ffmpeg(arguments: Sequence[str]) -> None:
     )
 
 
-def probe(source: str) -> MediaInfo:
-    """Inspect a local video without decoding its frames."""
+def probe_metadata(source: str) -> ProbeInfo:
+    """Read the shared stream and container metadata without decoding."""
     output = command_output(
         [
             executable("ffprobe"),
@@ -113,7 +115,8 @@ def probe(source: str) -> MediaInfo:
             "error",
             "-show_entries",
             (
-                "stream=codec_type,width,height,avg_frame_rate,nb_frames,duration:"
+                "stream=codec_type,width,height,sample_aspect_ratio,"
+                "avg_frame_rate,nb_frames,duration:"
                 "stream_side_data=rotation:format=duration"
             ),
             "-of",
@@ -121,7 +124,12 @@ def probe(source: str) -> MediaInfo:
             source,
         ]
     )
-    info = ProbeInfo.model_validate_json(output)
+    return ProbeInfo.model_validate_json(output)
+
+
+def probe(source: str) -> MediaInfo:
+    """Inspect square-pixel display dimensions without decoding frames."""
+    info = probe_metadata(source)
     video = next(
         (stream for stream in info.streams if stream.codec_type == "video"),
         None,
@@ -130,7 +138,13 @@ def probe(source: str) -> MediaInfo:
         message = f"No video stream found in {source}."
         raise MediaError(message)
     width, height = video.width, video.height
-    if any(item.rotation % 180 != 0 for item in video.side_data_list):
+    if video.sample_aspect_ratio not in {None, "N/A", "0:1"}:
+        ratio = Fraction(video.sample_aspect_ratio.replace(":", "/"))
+        if ratio <= 0:
+            message = f"Invalid pixel aspect ratio in {source}."
+            raise MediaError(message)
+        width = max(1, round(width * ratio))
+    if any(item.rotation % 180 == 90 for item in video.side_data_list):
         width, height = height, width
     duration_value = (
         video.duration
@@ -194,7 +208,10 @@ def decode_frames(
         "0:v:0",
         "-an",
         "-vf",
-        f"setpts=(PTS-STARTPTS)/{speed:.12g},fps={fps}:round=up",
+        (
+            f"scale={info.width}:{info.height},setsar=1,"
+            f"setpts=(PTS-STARTPTS)/{speed:.12g},fps={fps}:round=up"
+        ),
         "-f",
         "rawvideo",
         "-pix_fmt",
@@ -226,9 +243,14 @@ def decode_frames(
 
 
 def encode_frames(
-    frames: Iterable[Image.Image], output: str, size: Size, fps: int
+    frames: Iterable[Image.Image],
+    output: str,
+    size: Size,
+    fps: int,
+    encoding: Encoding | None = None,
 ) -> int:
     """Write frames incrementally and return the exact encoded count."""
+    quality = encoding or Encoding()
     pixel_format = (
         "yuv444p" if size.width % 2 or size.height % 2 else "yuv420p"
     )
@@ -253,9 +275,9 @@ def encode_frames(
         "-c:v",
         "libx264",
         "-preset",
-        "veryfast",
+        quality.preset.value,
         "-crf",
-        "18",
+        str(quality.crf),
         "-pix_fmt",
         pixel_format,
         "-movflags",
@@ -311,6 +333,73 @@ def tempo_filter(speed: float) -> str:
     return ",".join(f"atempo={factor:.12g}" for factor in factors)
 
 
+@contextmanager
+def selected_audio(
+    track: AudioTrack | None, duration: float
+) -> Generator[AudioTrack | None]:
+    """Trim an offset on disk so repetition excludes the skipped prefix."""
+    if track is None or not track.start:
+        yield track
+        return
+    metadata = probe_metadata(track.source)
+    audio_stream = next(
+        (
+            stream
+            for stream in metadata.streams
+            if stream.codec_type == "audio"
+        ),
+        None,
+    )
+    if audio_stream is None:
+        message = f"No audio stream found in {track.source}."
+        raise MediaError(message)
+    duration_value = (
+        audio_stream.duration
+        if audio_stream.duration not in {None, "N/A"}
+        else metadata.format.duration
+    )
+    message = (
+        f"Audio offset {track.start:g} seconds leaves no audio "
+        f"in {track.source}."
+    )
+    if duration_value not in {None, "N/A"}:
+        source_duration = float(duration_value)
+        if (
+            not math.isfinite(source_duration)
+            or track.start >= source_duration
+        ):
+            raise MediaError(message)
+        duration = min(duration, source_duration - track.start)
+    with tempfile.TemporaryDirectory(prefix="pic2panning-audio-") as directory:
+        selected = path_join(directory, "selected.wav")
+        ffmpeg(
+            [
+                "-nostdin",
+                "-y",
+                "-ss",
+                f"{track.start:.12g}",
+                "-i",
+                track.source,
+                "-map",
+                "0:a:0",
+                "-vn",
+                "-c:a",
+                "pcm_s16le",
+                "-ar",
+                "48000",
+                "-ac",
+                "2",
+                "-t",
+                f"{duration:.12g}",
+                selected,
+            ]
+        )
+        with wave.open(selected, "rb") as audio:
+            if not audio.getnframes():
+                raise MediaError(message)
+        yield AudioTrack(source=selected, loop=track.loop)
+
+
 def normalize_audio(
     video: str,
     output: str,
@@ -319,41 +408,44 @@ def normalize_audio(
     speed: float = 1,
 ) -> None:
     """Attach stereo audio, padding short tracks to the exact video length."""
-    arguments = ["-nostdin", "-y", "-i", video]
-    if track is None:
-        arguments.extend(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"])
-    else:
-        if track.loop:
-            arguments.extend(["-stream_loop", "-1"])
-        if track.start:
-            arguments.extend(["-ss", f"{track.start:.12g}"])
-        arguments.extend(["-i", track.source])
-    arguments.extend(
-        [
-            "-map",
-            "0:v:0",
-            "-map",
-            "1:a:0",
-            "-af",
-            (
-                "aformat=sample_fmts=fltp,"
-                f"{tempo_filter(speed)},apad,atrim=duration={duration:.12g},"
-                "asetpts=PTS-STARTPTS"
-            ),
-            "-c:v",
-            "copy",
-            "-c:a",
-            "aac",
-            "-ar",
-            "48000",
-            "-ac",
-            "2",
-            "-t",
-            f"{duration:.12g}",
-            output,
-        ]
-    )
-    ffmpeg(arguments)
+    with selected_audio(track, duration * speed) as selected:
+        arguments = ["-nostdin", "-y", "-i", video]
+        if selected is None:
+            arguments.extend(
+                ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
+            )
+        else:
+            if selected.loop:
+                arguments.extend(["-stream_loop", "-1"])
+            arguments.extend(["-i", selected.source])
+        arguments.extend(
+            [
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-af",
+                (
+                    "aformat=sample_fmts=fltp,"
+                    f"{tempo_filter(speed)},apad,"
+                    f"atrim=duration={duration:.12g},asetpts=PTS-STARTPTS"
+                ),
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-ar",
+                "48000",
+                "-ac",
+                "2",
+                "-t",
+                f"{duration:.12g}",
+                "-movflags",
+                "+faststart",
+                output,
+            ]
+        )
+        ffmpeg(arguments)
 
 
 def concatenate(

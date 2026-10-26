@@ -1,6 +1,13 @@
 """Photo motion, image editing, and local model tools for Apple Silicon."""
 
-from pic2panning.api import edit, generate, mask, render, run_job
+from pic2panning.api import (
+    edit,
+    generate,
+    generate_video,
+    mask,
+    render,
+    run_job,
+)
 from pic2panning.schemas.base import Size
 from pic2panning.schemas.editing import (
     Adjust,
@@ -17,6 +24,8 @@ from pic2panning.schemas.media import (
     AudioTrack,
     Cover,
     CoverPosition,
+    Encoding,
+    EncodingPreset,
     ImageClip,
     Motion,
     RenderRequest,
@@ -30,6 +39,7 @@ from pic2panning.schemas.models import (
     MaskRequest,
     Quantization,
 )
+from pic2panning.schemas.video import GenerateVideoRequest
 
 __all__ = [
     "JOB_ADAPTER",
@@ -42,8 +52,11 @@ __all__ = [
     "Crop",
     "Device",
     "EditRequest",
+    "Encoding",
+    "EncodingPreset",
     "Flip",
     "GenerateRequest",
+    "GenerateVideoRequest",
     "GenerationModel",
     "ImageClip",
     "Job",
@@ -59,6 +72,7 @@ __all__ = [
     "VideoClip",
     "edit",
     "generate",
+    "generate_video",
     "job_schema",
     "mask",
     "render",

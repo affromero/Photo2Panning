@@ -3,10 +3,21 @@
 import math
 from collections.abc import Iterator
 
+import numpy as np
 from PIL import Image
 
 from pic2panning.schemas.base import Size
 from pic2panning.schemas.media import ImageClip, Motion, VideoClip
+
+SHUTTER_SAMPLES = 8
+LINEAR_SRGB = np.array(
+    [
+        value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+        for value in (level / 255 for level in range(256))
+    ],
+    dtype=np.float32,
+)
+LINEAR_SRGB.setflags(write=False)
 
 
 def frame_count(duration: float, fps: int) -> int:
@@ -22,7 +33,10 @@ def center_progress(progress: float) -> float:
 def crop_dimensions(image: Image.Image, size: Size) -> tuple[float, float]:
     """Return the largest source viewport matching the output aspect ratio."""
     scale = min(image.width / size.width, image.height / size.height)
-    return size.width * scale, size.height * scale
+    return (
+        min(float(image.width), size.width * scale),
+        min(float(image.height), size.height * scale),
+    )
 
 
 def transform_frame(
@@ -65,9 +79,48 @@ def image_frames(
     for index in range(total):
         step = index if index < count else 2 * count - 2 - index
         progress = step / (count - 1) if count > 1 else 0.0
+        if clip.shutter_angle and 0 < step < count - 1:
+            yield exposure_frame(
+                image,
+                clip,
+                size,
+                progress,
+                clip.shutter_angle / (360 * (count - 1)),
+            )
+            continue
         if clip.focus_center:
             progress = center_progress(progress)
         yield transform_frame(image, size, clip.motion, progress, clip.zoom)
+
+
+def exposure_frame(
+    image: Image.Image,
+    clip: ImageClip,
+    size: Size,
+    progress: float,
+    interval: float,
+) -> Image.Image:
+    """Integrate an RGB exposure in linear light without retaining subframes."""
+    linear = np.zeros((size.height, size.width, 3), dtype=np.float32)
+    for index in range(SHUTTER_SAMPLES):
+        offset = ((index + 0.5) / SHUTTER_SAMPLES - 0.5) * interval
+        sample_progress = min(1.0, max(0.0, progress + offset))
+        if clip.focus_center:
+            sample_progress = center_progress(sample_progress)
+        with transform_frame(
+            image, size, clip.motion, sample_progress, clip.zoom
+        ) as sample:
+            linear += LINEAR_SRGB[np.asarray(sample)]
+    linear /= SHUTTER_SAMPLES
+    srgb = np.where(
+        linear <= 0.0031308,
+        linear * 12.92,
+        1.055 * np.power(linear, 1 / 2.4) - 0.055,
+    )
+    srgb *= 255
+    np.clip(srgb, 0, 255, out=srgb)
+    np.rint(srgb, out=srgb)
+    return Image.fromarray(srgb.astype(np.uint8))
 
 
 def video_frame(

@@ -9,8 +9,19 @@ from contextlib import redirect_stdout
 from klogr.path import path_read_text
 
 from pic2panning.api import run_job
-from pic2panning.command.parser import parse_arguments
-from pic2panning.command.requests import to_job
+from pic2panning.command.media import EditCommand, RenderCommand
+from pic2panning.command.models import (
+    GenerateCommand,
+    GenerateVideoCommand,
+    MaskCommand,
+)
+from pic2panning.command.parse import (
+    InspectCommand,
+    RunCommand,
+    SchemaCommand,
+    ValidateCommand,
+    parse_command,
+)
 from pic2panning.schemas.jobs import JOB_ADAPTER, job_schema
 from pic2panning.tools.media import probe
 
@@ -18,25 +29,33 @@ from pic2panning.tools.media import probe
 def main(argv: Sequence[str] | None = None) -> int:
     """Write JSON to stdout on success and structured errors to stderr."""
     try:
-        arguments = parse_arguments(argv)
-        match arguments.command:
-            case "schema":
+        command = parse_command(argv)
+        match command:
+            case None:
+                return 0
+            case SchemaCommand():
                 sys.stdout.write(json.dumps(job_schema(), indent=2) + "\n")
                 return 0
-            case "validate" | "run":
+            case ValidateCommand() | RunCommand():
                 request = JOB_ADAPTER.validate_json(
-                    path_read_text(arguments.job)
+                    path_read_text(command.job)
                 )
-                if arguments.command == "validate":
+                if isinstance(command, ValidateCommand):
                     sys.stdout.write(request.model_dump_json(indent=2) + "\n")
                     return 0
-            case "inspect":
+            case InspectCommand():
                 sys.stdout.write(
-                    probe(arguments.media).model_dump_json(indent=2) + "\n"
+                    probe(command.media).model_dump_json(indent=2) + "\n"
                 )
                 return 0
-            case _:
-                request = to_job(arguments)
+            case (
+                RenderCommand()
+                | EditCommand()
+                | GenerateCommand()
+                | MaskCommand()
+                | GenerateVideoCommand()
+            ):
+                request = command.to_job()
         with redirect_stdout(sys.stderr):
             result = run_job(request)
         sys.stdout.write(result.model_dump_json(indent=2) + "\n")

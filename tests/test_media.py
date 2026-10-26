@@ -10,7 +10,7 @@ from typing import cast
 
 import pytest
 from klogr.path import path_exists, path_join
-from PIL import Image, ImageDraw, ImageSequence
+from PIL import Image, ImageChops, ImageDraw, ImageSequence, ImageStat
 
 from pic2panning.errors import MediaError
 from pic2panning.schemas.base import Size
@@ -18,6 +18,8 @@ from pic2panning.schemas.media import (
     AudioTrack,
     Cover,
     CoverPosition,
+    Encoding,
+    EncodingPreset,
     ImageClip,
     Motion,
     RenderRequest,
@@ -32,6 +34,17 @@ from pic2panning.tools.frames import (
 from pic2panning.tools.media import decode_frames, encode_frames, ffmpeg, probe
 from pic2panning.tools.render import render
 from pic2panning.tools.text import title_card
+
+
+def test_large_photo_crop_stays_inside_source_at_both_pan_edges() -> None:
+    """Fractional 24-megapixel scaling never creates a negative crop offset."""
+    with Image.new("RGB", (6000, 4000), "blue") as source:
+        for progress in (0.0, 1.0):
+            with transform_frame(
+                source, Size(width=1080, height=1920), Motion.PAN_LR, progress
+            ) as frame:
+                assert frame.size == (1080, 1920)
+                assert color_at(frame) == (0, 0, 255)
 
 
 @pytest.fixture
@@ -412,6 +425,61 @@ def test_audio_offset_pads_or_loops_short_track(
         assert ending < 100
 
 
+def test_looped_audio_never_reintroduces_the_skipped_prefix(
+    media_workspace: str,
+) -> None:
+    """Repeating a selected tone excludes the silent prefix every cycle."""
+    source = save_stripes(media_workspace)
+    audio = path_join(media_workspace, "prefixed-tone.wav")
+    ffmpeg(
+        [
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=1",
+            "-af",
+            "volume=volume=0:enable='lt(t,0.5)'",
+            audio,
+        ]
+    )
+    output = path_join(media_workspace, "looped.mp4")
+    render(
+        RenderRequest(
+            clips=(ImageClip(source=source, duration=2),),
+            output=output,
+            size=Size(width=40, height=40),
+            fps=10,
+            audio=AudioTrack(source=audio, start=0.5, loop=True),
+        )
+    )
+    for start in (0.05, 0.55, 1.05, 1.55):
+        assert audio_energy(output, start, 0.1) > 1000
+
+
+@pytest.mark.parametrize("loop", [False, True])
+@pytest.mark.parametrize("suffix", ["wav", "m4a"])
+def test_audio_offset_at_the_end_rejects_an_empty_selection(
+    media_workspace: str, suffix: str, *, loop: bool
+) -> None:
+    """An unusable soundtrack offset fails without publishing the video."""
+    source = save_stripes(media_workspace)
+    audio = path_join(media_workspace, f"short.{suffix}")
+    ffmpeg(["-y", "-f", "lavfi", "-i", "sine=duration=0.4", audio])
+    output = path_join(media_workspace, "empty-selection.mp4")
+    with pytest.raises(MediaError, match=r"offset .* leaves no audio"):
+        render(
+            RenderRequest(
+                clips=(ImageClip(source=source, duration=0.2),),
+                output=output,
+                size=Size(width=40, height=40),
+                fps=10,
+                audio=AudioTrack(source=audio, start=0.4, loop=loop),
+            )
+        )
+    assert not path_exists(output)
+
+
 def test_multi_clip_order_and_end_cover_survive_concatenation(
     media_workspace: str,
 ) -> None:
@@ -465,6 +533,29 @@ def test_gif_supports_odd_dimensions_and_correct_frame_timing(
             frame.info["duration"] for frame in ImageSequence.Iterator(image)
         ]
     assert sum(durations) == 600
+
+
+def test_gif_at_maximum_representable_rate_has_exact_duration(
+    media_workspace: str,
+) -> None:
+    """One hundred GIF frames per second use exact centisecond delays."""
+    source = save_stripes(media_workspace)
+    output = path_join(media_workspace, "fast.gif")
+    result = render(
+        RenderRequest(
+            clips=(ImageClip(source=source, duration=0.2),),
+            output=output,
+            size=Size(width=40, height=40),
+            fps=100,
+        )
+    )
+    with Image.open(output) as image:
+        durations = [
+            frame.info["duration"] for frame in ImageSequence.Iterator(image)
+        ]
+    assert result.frames == len(durations) == 20
+    assert result.duration is not None
+    assert sum(durations) == result.duration * 1000 == 200
 
 
 def test_failed_video_decode_does_not_publish_output(
@@ -647,3 +738,113 @@ def test_video_without_stream_duration_uses_container_timeline(
     info = probe(source)
     assert info.duration == pytest.approx(0.4)
     assert (info.width, info.height) == (40, 40)
+
+
+@pytest.mark.parametrize("rotation", [0, 90, 180, 270])
+def test_anamorphic_video_preserves_display_geometry_and_rotation(
+    media_workspace: str, rotation: int
+) -> None:
+    """Pixel aspect and display rotation are each applied once before crop."""
+    source = path_join(media_workspace, "anamorphic.mp4")
+    ffmpeg(
+        [
+            "-y",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=c=red:s=120x40:r=10:d=0.2",
+            "-vf",
+            (
+                "drawbox=x=50:y=10:w=20:h=20:color=blue:t=fill,"
+                "drawbox=x=0:y=0:w=10:h=40:color=lime:t=fill,setsar=2"
+            ),
+            "-c:v",
+            "libx264",
+            "-pix_fmt",
+            "yuv420p",
+            source,
+        ]
+    )
+    rotated = path_join(media_workspace, "oriented.mp4")
+    ffmpeg(
+        [
+            "-y",
+            "-display_rotation",
+            str(rotation),
+            "-i",
+            source,
+            "-c",
+            "copy",
+            rotated,
+        ]
+    )
+    info = probe(rotated)
+    dimensions = (40, 240) if rotation % 180 else (240, 40)
+    assert (info.width, info.height) == dimensions
+    green_position = {
+        0: (5, 20),
+        90: (20, 234),
+        180: (234, 20),
+        270: (20, 5),
+    }[rotation]
+    with (
+        closing(decode_frames(rotated, info, 10)) as frames,
+        next(frames) as frame,
+    ):
+        assert frame.size == dimensions
+        red, green, blue_value = color_at(frame, *green_position)
+        assert green > 240
+        assert red < 10
+        assert blue_value < 10
+    output = path_join(media_workspace, "square.mp4")
+    render(
+        RenderRequest(
+            clips=(VideoClip(source=rotated),),
+            output=output,
+            size=Size(width=40, height=40),
+            fps=10,
+        )
+    )
+    with (
+        closing(decode_frames(output, probe(output), 10)) as frames,
+        next(frames) as frame,
+        frame.getchannel("B") as blue,
+        blue.point(lambda value: 255 if value > 150 else 0) as mask,
+    ):
+        bounds = mask.getbbox()
+    assert bounds is not None
+    width, height = bounds[2] - bounds[0], bounds[3] - bounds[1]
+    expected = (20, 40) if rotation % 180 else (40, 20)
+    assert (width, height) == expected
+
+
+def test_encoding_quality_controls_decoded_detail(
+    media_workspace: str,
+) -> None:
+    """The selected CRF changes retained detail in a real encoded video."""
+    size = Size(width=33, height=31)
+    errors = []
+    with Image.new("RGB", size.as_tuple) as source:
+        source.putdata(
+            [
+                ((index * 73) % 256, (index * 37) % 256, (index * 19) % 256)
+                for index in range(size.width * size.height)
+            ]
+        )
+        for crf in (0, 45):
+            output = path_join(media_workspace, f"quality-{crf}.mp4")
+            count = encode_frames(
+                (source.copy() for _ in range(2)),
+                output,
+                size,
+                10,
+                Encoding(crf=crf, preset=EncodingPreset.SLOW),
+            )
+            assert count == 2
+            with (
+                closing(decode_frames(output, probe(output), 10)) as frames,
+                next(frames) as frame,
+                ImageChops.difference(source, frame) as difference,
+            ):
+                errors.append(sum(ImageStat.Stat(difference).mean))
+    assert errors[0] < errors[1] / 4
