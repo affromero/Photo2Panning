@@ -1,0 +1,11 @@
+{
+  "kind": "generate",
+  "source": "coast.jpg",
+  "output": "coast-evening.png",
+  "prompt": "The same rocky coast at dusk, warm light on the cliffs, calm sea, photograph",
+  "model": "flux3",
+  "quantization": 4,
+  "seed": 7,
+  "steps": 16,
+  "size": {"width": 512, "height": 512}
+}

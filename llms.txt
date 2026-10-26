@@ -1,0 +1,29 @@
+# Photo2Panning
+
+Python library and CLI for photo motion, video processing, image editing,
+and local quantized image and video models on Apple Silicon.
+
+- [README](readme.md): Installation, public APIs, and runnable commands.
+- [Tool guide](docs/agent-tools.md): Job selection, field meanings, validation,
+  execution, and error handling for agents.
+- [Local models](docs/models.md): Quantized FLUX, CPU segmentation, and local
+  LTX first/last frame video with the separate video extra.
+- [Repository instructions](AGENTS.md): Rules for changing this library.
+- [Render job](examples/render.json): Photos, per-clip motion, and output size.
+- [Edit job](examples/edit.json): Ordered deterministic picture operations.
+- [Generation job](examples/generate.json): Quantized FLUX 3 reference edit.
+- [Video generation job](examples/generate-video.json): Local LTX shot with
+  first and last image guides, using bundled public photos.
+- [Mask job](examples/mask.json): Text-guided object segmentation.
+- [Soundtrack example](examples/add_music.py): Replace a finished video's
+  audio while copying its encoded video without recompression.
+
+Get the authoritative JSON schema with `uv run pic2panning schema`.
+Validate with `uv run pic2panning validate job.json` before execution.
+Run a validated request with `uv run pic2panning run job.json`.
+Call the Python API with the same validated request models when embedding.
+Job kinds are render, edit, generate, generate-video, and mask. Public API
+functions are render, edit, generate, generate_video, mask, and run_job.
+Image and mask models use the models extra; LTX uses the video extra.
+Generated video is silent. Endpoint guides influence generation without
+promising identical input pixels in the output.

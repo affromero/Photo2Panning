@@ -1,88 +1,74 @@
 [build-system]
-build-backend = "poetry.core.masonry.api"
-requires = ["poetry-core"]
+requires = ["hatchling>=1.32.4"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pic2panning"
+version = "0.2.0"
+description = "Photo motion, video processing, and local image editing on Apple Silicon."
+readme = "readme.md"
+requires-python = ">=3.14,<3.15"
+license = "MIT"
+authors = [{name = "Andres Romero", email = "me@afromero.co"}]
+dependencies = ["klogr>=0.2.1", "numpy>=2.5.4", "pillow>=12.3.0,<13", "pydantic>=2.14.1", "tyro==1.0.16"]
+
+[project.optional-dependencies]
+models = ["beartype>=0.23.1", "jaxtyping>=0.3.3", "mflux==0.23.0", "torch>=2.14.1", "torchvision>=0.29.1"]
+youtube = ["yt-dlp>=2026.10.21"]
+video = [
+  "ltx-core-mlx @ git+https://github.com/dgrauet/ltx-2-mlx.git@f14dbf930626eafd86b9f29030ac7a23b4e914b8#subdirectory=packages/ltx-core-mlx",
+  "ltx-pipelines-mlx @ git+https://github.com/dgrauet/ltx-2-mlx.git@f14dbf930626eafd86b9f29030ac7a23b4e914b8#subdirectory=packages/ltx-pipelines-mlx",
+]
+
+[project.scripts]
+pic2panning = "pic2panning.cli:main"
+
+[project.urls]
+Repository = "https://github.com/affromero/Photo2Panning"
+
+[dependency-groups]
+dev = ["mypy>=2.4.0", "pre-commit>=4.7.0", "pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff==0.17.2", "ty>=0.0.91"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pic2panning"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.uv]
+required-version = ">=0.11.17"
+environments = ["sys_platform == 'darwin' and platform_machine == 'arm64'"]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = {index = "pytorch-cpu"}
+torchvision = {index = "pytorch-cpu"}
 
 [tool.mypy]
-check_untyped_defs = true
-disallow_any_generics = true
-# for strict mypy: (this is the tricky one :-))
-disallow_untyped_defs = true
-enable_error_code = ["ignore-without-code"]
-explicit_package_bases = true
-follow_imports = "silent"
-no_implicit_reexport = true
-plugins = [
-  "pydantic.mypy"
-]
-show_error_codes = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-
-[tool.poetry]
-authors = ["Andrés Romero <me@afromero.co>"]
-description = ""
-name = "pic2panning"
-readme = "README.md"
-version = "0.1.0"
-
-[tool.poetry.dependencies]
-fonttools = "^4.54.1"
-ipython = "^8.29.0"
-matplotlib = "^3.9.2"
-moviepy = "^1.0.3"
-mypy = "^1.13.0"
-pillow = "9.5.0" # required for moviepy resize
-pre-commit = "^4.0.1"
-pydantic = "^2.9.2"
-python = "^3.10"
-pytubefix = "^8.2.0"
-rich = "^13.9.4"
-tyro = "^0.8.14"
-
-[tool.poetry.group.generative.dependencies]
-accelerate = "^1.1.0"
-diffusers = "^0.31.0"
-jaxtyping = "^0.2.34"
-optimum-quanto = "0.2.2"
-protobuf = "^5.28.3"
-sam-2 = {git = "git@github.com:facebookresearch/sam2.git"}
-sentencepiece = "^0.2.0"
-torch = {source = "PytorchCuda", version = "^2.5.1"}
-torchvision = {source = "PytorchCuda", version = "^0.20.1"}
-transformers = "^4.46.2"
-
-[[tool.poetry.source]]
-name = "PytorchCuda"
-priority = "explicit"
-url = "https://download.pytorch.org/whl/cu121"
+strict = true
+python_version = "3.14"
+plugins = ["pydantic.mypy"]
+files = ["pic2panning", "tests", "scripts", "examples"]
+warn_unreachable = true
+enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]
 
 [tool.pydantic-mypy]
 init_forbid_extra = true
 init_typed = true
 warn_required_dynamic_aliases = true
 
-[tool.ruff]
-# Exclude a variety of commonly ignored directories.
-exclude = [
-  "poetry.lock"
-]
-indent-width = 4
-# Same as Black.
-line-length = 79
-# Assume Python 3.10.
-target-version = "py310"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-config --strict-markers -ra"
+markers = ["models: optional local model inference requiring downloaded weights"]
 
-[tool.ruff.format]
-docstring-code-line-length = "dynamic"
-indent-style = "space"
-line-ending = "auto"
-quote-style = "double"
-skip-magic-trailing-comma = false
+[tool.coverage.run]
+source = ["pic2panning"]
+branch = true
 
-[tool.ruff.lint]
-# Allow unused variables when underscore-prefixed.
-# Allow fix for all enabled rules (when `--fix`) is provided.
-fixable = ["ALL"]
-
-[tool.tomlsort]
-all = true
+[tool.ty.src]
+include = ["pic2panning", "tests", "scripts", "examples"]

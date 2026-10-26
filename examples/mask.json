@@ -1,0 +1,9 @@
+{
+  "kind": "mask",
+  "source": "coast.jpg",
+  "output": "person-mask.png",
+  "prompt": "person",
+  "device": "cpu",
+  "threshold": 0.3,
+  "merge": true
+}

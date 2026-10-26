@@ -7,3 +7,11 @@ __pycache__/
 *.pyc
 *.mov
 assets/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+logs/
