@@ -1,0 +1,38 @@
+name: Quality
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: '0.13.5'
+          enable-cache: true
+      - run: brew install ffmpeg
+      - run: uv sync --frozen
+      - run: uv run pre-commit run --all-files
+      - run: uv run mypy
+      - run: uv run pytest --cov --cov-report=term-missing
+      - run: uv build
+      - name: Verify installed wheel and core import isolation
+        run: |
+          uv run --isolated --no-project --with dist/*.whl python -I -c 'import sys, pic2panning; assert "torch" not in sys.modules; assert "mlx.core" not in sys.modules; assert "mflux" not in sys.modules'
+          uv run --isolated --no-project --with dist/*.whl pic2panning schema > /tmp/pic2panning-schema.json
+  models-import:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+        with:
+          version: '0.13.5'
+          enable-cache: true
+      - run: uv sync --frozen --all-extras
+      - name: Verify Metal and model dependencies without downloading weights
+        run: uv run --all-extras python -c 'import mlx.core, torch, torchvision, transformers; from mflux.models.flux3.variants import Flux3Klein, Flux3KleinEdit; from mflux.models.flux.variants.txt2img.flux import Flux1; from mflux.models.flux.variants.fill.flux_fill import Flux1Fill'
+      - name: Verify optional model runtime in a background worker
+        run: PIC2PANNING_TEST_MODELS=1 uv run --all-extras pytest -q tests/test_models.py

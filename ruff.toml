@@ -1,0 +1,32 @@
+# Shared correctness rules, with formatter conflicts and numeric geometry
+# conventions kept consistent across editors, hooks, and CI.
+line-length = 79
+target-version = "py314"
+exclude = [".venv", "uv.lock"]
+
+[format]
+docstring-code-format = true
+docstring-code-line-length = 79
+
+[lint]
+select = ["ALL", "PLC2701"]
+preview = true
+explicit-preview-rules = true
+ignore = [
+  "CPY001", # The repository license supplies copyright information.
+  "COM812", "D203", "D213", "E501", "ISC001",
+  "UP037", # Quoted jaxtyping shapes are intentional.
+  "G004", # klogr uses formatted messages.
+  "PLR2004", # Pixel and codec constants are clear at their point of use.
+  "S603", "S607", # FFmpeg and Python are explicit subprocess boundaries.
+  "TC001", "TC002", "TC003", # Pydantic and runtime typing need imports.
+  "TRY003", "TRY301", "EM101", "EM102", # Contextual boundary errors.
+]
+
+[lint.per-file-ignores]
+"tests/**/*.py" = ["S101"]
+# materialize permits HTTP(S) only before urllib is called.
+"pic2panning/tools/io.py" = ["S310"]
+
+[lint.pylint]
+max-args = 5
