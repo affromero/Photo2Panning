@@ -9,6 +9,7 @@ from contextlib import redirect_stdout
 from klogr.path import path_read_text
 
 from pic2panning.api import run_job
+from pic2panning.command.camera import CameraCommand, SceneCommand
 from pic2panning.command.media import EditCommand, RenderCommand
 from pic2panning.command.models import (
     GenerateCommand,
@@ -50,6 +51,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 return 0
             case (
                 RenderCommand()
+                | CameraCommand()
+                | SceneCommand()
                 | EditCommand()
                 | GenerateCommand()
                 | MaskCommand()

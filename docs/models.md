@@ -17,6 +17,79 @@ Choose quantized weights and a small image for an initial run. A successful
 package import verifies installation; generating an image also verifies
 that the selected weights and inference path work on the machine.
 
+## Camera scenes
+
+```bash
+uv sync --frozen --extra camera
+uv run --extra camera pic2panning scene examples/media/waterfall.jpg \
+  --output waterfall.ply --metadata waterfall-scene.json \
+  --num-tokens 1800 --max-edge 1920 --device mps
+```
+
+The camera extra installs MoGe-2 for local geometry prediction and MLX3D
+for native Metal Gaussian rendering. Model code and renderer revisions are
+pinned. The official `Ruicheng/moge-2-vitl-normal` checkpoint is pinned to
+`cb0e8bbd6b1e243589717c78e750b1ba4c093acf`. Its `model.pt` file is
+1,323,815,904 bytes. Downloads enter the normal Hugging Face cache, and
+the adapter verifies the checkpoint SHA256 before loading it.
+
+The [official weight card](https://huggingface.co/Ruicheng/moge-2-vitl-normal/blob/cb0e8bbd6b1e243589717c78e750b1ba4c093acf/README.md)
+declares the MIT license. The [MoGe source license](https://github.com/microsoft/MoGe/blob/925b8ed835a7a9cdb7578ba15c658a0afc969030/LICENSE)
+contains Microsoft MIT terms and Apache 2.0 terms for the DINOv2 components.
+The [MLX3D renderer](https://github.com/amirhossein-razlighi/mlx3D/tree/29ba415cc8a9004750b44fe9083e1ce6715d5f0d)
+runs the exported Gaussian scene locally.
+
+MoGe predicts metric points, depth, normals, and intrinsics. The adapter
+creates one source-colored, degree-zero Gaussian per predicted pixel, with
+an analytic footprint based on pixel size and depth. It retains finite
+raw sky predictions and uses the foreground mask to choose conservative
+default camera offsets. No hidden surfaces are reconstructed behind
+foreground objects, so keep camera movements modest.
+
+`--num-tokens` accepts 1200 to 3600 and defaults to 1800. More tokens
+increase inference detail and cost. `--max-edge` bounds the geometry's
+longest image dimension and defaults to 1920; it accepts 256 to 4096.
+Calibration scales back to the original photo dimensions. The original
+photo stays available for sharp pans and pause endpoints. Explicit `mps`
+and `cpu` devices are supported for prediction; a failed MPS request does
+not switch devices. Camera rendering requires MLX Metal.
+
+The PLY scene and JSON calibration can be reused:
+
+```bash
+uv run --extra camera pic2panning camera examples/media/waterfall.jpg \
+  --scene waterfall.ply --metadata waterfall-scene.json \
+  --pause-at 0.6 --output waterfall-camera.mp4 --crf 16 --preset slow
+```
+
+The default timeline is 4 seconds of panning, a 0.25-second hold,
+a 5-second excursion and return, another hold, and 3.2 seconds of resumed
+panning. It produces a silent 12.7-second MP4 at 1080 by 1920 and 60 fps.
+Each phase rounds up to whole frames. `--before`, `--duration`, `--after`,
+and `--hold` control these phases.
+
+`--pan-start`, `--pause-at`, and `--pan-end` select horizontal crop
+positions between 0 and 1. They must advance through the pause in either
+direction. `--position X Y Z` sets the far displacement in estimated
+metres: right, down, forward. Negative Y raises the camera. Omitting it
+uses a small offset based on foreground depth. The camera eases out and
+back to the same pose. Short linear-light handoffs use the original paused
+photo; H.264 encoding changes the final pixels slightly.
+
+Source and optional scene checksums protect the calibration relationship.
+The PLY scene and JSON metadata must be local files. Rendering streams frames
+and does not retain the completed video in memory. Inferred geometry may
+soften fine details or reveal gaps during wider camera moves.
+
+On a 36 GB M3 Max, a cached offline CLI run reconstructed the public
+1920 by 1280 waterfall photo into 2,457,600 Gaussians in 7.42 seconds.
+It used MPS, 1800 tokens, and a 1920-pixel maximum edge. Peak physical
+memory was 4.46 GB. The production camera API rendered the complete
+12.7-second, 762-frame timeline at 1080 by 1920 and 60 fps. All frames
+decoded successfully, and inspected pause and return boundaries retained
+the original framing. This verifies one public scene; other photos and
+wider camera paths need their own visual check.
+
 ## First and last frame video
 
 Install the separate video dependencies:

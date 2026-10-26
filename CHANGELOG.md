@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.3.0] - 2026-10-26
+
+### Added
+
+- Local MoGe-2 scene reconstruction with MIT-licensed weights, bounded
+  geometry resolution, verified checkpoints, and reusable PLY scenes with
+  source-bound calibration. Prediction supports explicit MPS or CPU.
+  ([#2](https://github.com/affromero/Photo2Panning/pull/2))
+- Calibrated camera excursions between photo pans, with configurable
+  position, exact photo anchors, return paths, and streamed 60 fps export.
+  The CLI, Python API, and JSON jobs share the same validated requests.
+  ([#2](https://github.com/affromero/Photo2Panning/pull/2))
+
+### Changed
+
+- Show animated results from the original public photos in the README,
+  with full portrait MP4 downloads, an editing comparison, and an actual
+  CPU-generated waterfall mask.
+  ([#2](https://github.com/affromero/Photo2Panning/pull/2))
+- Verify native scene colors, tiny scenes, calibration, and failure cleanup
+  without downloading model weights. Core discovery keeps optional model
+  frameworks unloaded.
+  ([#2](https://github.com/affromero/Photo2Panning/pull/2))
+
 ## [0.2.0] - 2026-10-25
 
 ### Added
@@ -38,4 +62,5 @@
   frames, strict mypy, ty, Ruff, and repository quality hooks.
   ([#1](https://github.com/affromero/Photo2Panning/pull/1))
 
+[0.3.0]: https://github.com/affromero/Photo2Panning/releases/tag/v0.3.0
 [0.2.0]: https://github.com/affromero/Photo2Panning/releases/tag/v0.2.0

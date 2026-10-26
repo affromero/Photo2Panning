@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pic2panning"
-version = "0.2.0"
+version = "0.3.0"
 description = "Photo motion, video processing, and local image editing on Apple Silicon."
 readme = "readme.md"
 requires-python = ">=3.14,<3.15"
@@ -14,6 +14,14 @@ dependencies = ["klogr>=0.2.1", "numpy>=2.5.4", "pillow>=12.3.0,<13", "pydantic>
 
 [project.optional-dependencies]
 models = ["beartype>=0.23.1", "jaxtyping>=0.3.3", "mflux==0.23.0", "torch>=2.14.1", "torchvision>=0.29.1"]
+camera = [
+  "beartype>=0.23.1",
+  "jaxtyping>=0.3.3",
+  "mlx3d @ git+https://github.com/amirhossein-razlighi/mlx3D.git@29ba415cc8a9004750b44fe9083e1ce6715d5f0d",
+  "moge @ git+https://github.com/microsoft/MoGe.git@925b8ed835a7a9cdb7578ba15c658a0afc969030",
+  "torch>=2.14.1",
+  "torchvision>=0.29.1",
+]
 youtube = ["yt-dlp>=2026.10.21"]
 video = [
   "ltx-core-mlx @ git+https://github.com/dgrauet/ltx-2-mlx.git@f14dbf930626eafd86b9f29030ac7a23b4e914b8#subdirectory=packages/ltx-core-mlx",

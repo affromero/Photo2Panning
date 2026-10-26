@@ -10,6 +10,8 @@ the runtime schemas.
 | Request `kind` | Use it for | Python function |
 | --- | --- | --- |
 | `render` | Photo pan or zoom, video reframing, speed, music, title cards | `render` |
+| `scene` | Reconstruct a photo into a reusable calibrated Gaussian scene | `reconstruct_scene` |
+| `camera` | Pan, pause for a 3D camera excursion, return, and resume | `render_camera` |
 | `edit` | Crop, resize, rotate, flip, brightness, contrast, saturation | `edit` |
 | `generate` | Prompted generation, reference-image editing, masked fill | `generate` |
 | `generate-video` | One local shot guided by first and last image inputs | `generate_video` |
@@ -116,6 +118,84 @@ Image outputs support PNG, JPEG, and WebP. Masks and masked edits require
 PNG so their pixel values remain lossless. Unsupported output suffixes
 fail request validation before model weights load.
 
+### Reconstruct a scene, then move the camera
+
+The `camera` extra adds local geometry prediction and Gaussian rendering.
+Create a scene once and reuse its PLY and calibration for camera variants:
+
+```bash
+uv sync --frozen --extra camera
+uv run --extra camera pic2panning run examples/scene.json
+uv run --extra camera pic2panning run examples/camera.json
+```
+
+The equivalent reconstruction command is:
+
+```bash
+uv run --extra camera pic2panning scene examples/media/waterfall.jpg \
+  --output waterfall.ply --metadata waterfall-scene.json \
+  --device mps --num-tokens 1800
+```
+
+A `scene` request requires `source`, a PLY `output`, and a JSON `metadata`
+destination. It uses the pinned `moge-2-vitl-normal` geometry predictor.
+`device` defaults to `mps`; `cpu` is an explicit alternative. A device
+failure stops execution. `num_tokens` ranges from 1200 to 3600 and defaults
+to 1800. Larger budgets increase inference detail, memory use, and time.
+`max_edge` bounds the geometry image's longest edge, from 256 to 4096
+pixels, defaulting to 1920. Larger source images receive an aspect-preserving
+resize for reconstruction. The original photo remains unchanged for panning,
+and calibration intrinsics still refer to its original oriented dimensions.
+The first run downloads the checkpoint into the normal model cache.
+
+`SceneResult` reports `output`, `metadata`, the positive Gaussian `points`
+count, `source_sha256`, and `predictor`. The source hash identifies the
+original file bytes. Keep the original image with its generated artifacts.
+The metadata records the oriented source dimensions, pixel intrinsics,
+OpenCV world-to-camera transform, color encoding, and positive foreground
+depth percentile `10`. It also binds the scene file with `scene_sha256`.
+
+A `camera` request requires the same `source`, the PLY `scene`, its JSON
+`metadata`, and an MP4 `output`. Execution verifies the source hash and
+dimensions before loading scene geometry. It verifies the scene hash when
+the sidecar supplies one. Changes to the source require reconstruction.
+You can also supply an externally generated degree-zero Gaussian scene
+with a matching `SceneCalibration` sidecar.
+
+`pan_start`, `pause_at`, and `pan_end` are horizontal crop positions from
+0 at the left edge to 1 at the right. They must strictly increase or
+strictly decrease through the pause. The defaults are `0`, `0.5`, and `1`.
+`before` defaults to 4 seconds, `duration` to 5 seconds for the whole 3D
+excursion and return, and `after` to 3.2 seconds. `hold` adds 0.25 seconds
+on each side of the excursion; `0` omits both holds.
+
+Each phase rounds its duration up to a whole output frame. Both pan phases
+need at least two frames, and the excursion needs at least three. Total
+frames equal `ceil(before * fps) + ceil(duration * fps)` plus
+`ceil(after * fps) + 2 * ceil(hold * fps)`. Default timing at 60 fps produces 762 frames,
+or 12.7 seconds. The camera returns to the paused source composition before
+the pan resumes. Original pixels anchor the handoff frames before encoding;
+lossy MP4 decoding can change individual pixel values.
+
+`position` is the far camera offset in model-estimated metres, measured in
+the original camera's axes: positive X moves right, positive Y moves down,
+and positive Z moves forward. Negative Y raises the camera. Omit it for
+the conservative default `(0.02, -0.005, 0.01)` times foreground depth.
+The path eases outward and back while retaining its optical aim. A short
+linear-light blend handles the source-photo handoff near each endpoint.
+Choose small offsets: single-image geometry can expose holes or stretched
+surfaces at unseen viewpoints.
+
+Camera output defaults to 1080 by 1920 at 60 fps. Dimensions must be even;
+`fps` ranges from 1 to 240. `shutter_angle` defaults to 180 for its photo
+pans and accepts 0 to 360. `encoding` has the same CRF and preset controls
+as `render`. The complete timeline streams through one encoder and writes
+a silent MP4. Add music afterward with the soundtrack example.
+
+See the paired [scene job](../examples/scene.json) and
+[camera job](../examples/camera.json), and [local models](models.md) for
+the predictor and renderer setup.
+
 ### Generate video from first and last frames
 
 `generate-video` uses the local MLX LTX pipeline. Both stages receive a
@@ -175,9 +255,11 @@ from the current working directory. Use a new output path. Existing output
 files require explicit `overwrite: true`; input files stay protected even
 when overwrite is enabled.
 
-CLI success writes a JSON result to stdout. Read `outputs` for the actual
-files produced, including separate segmentation masks. `width`, `height`,
-`frames`, and `duration` describe the produced media when applicable.
+CLI success writes a JSON result to stdout. Scene reconstruction returns
+`SceneResult` with singular `output` and `metadata` paths plus `points` and
+source identity. Other jobs return `JobResult`: read `outputs` for the
+actual files produced, including separate segmentation masks. `width`,
+`height`, `frames`, and `duration` describe produced media when applicable.
 Use the exit status to distinguish failures; do not infer success from the
 existence of a previously created file.
 

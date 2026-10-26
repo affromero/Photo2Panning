@@ -179,6 +179,8 @@ def test_module_entry_points_emit_discoverable_schema(module: str) -> None:
     assert discriminator["propertyName"] == "kind"
     assert isinstance(discriminator["mapping"], dict)
     assert set(discriminator["mapping"]) == {
+        "camera",
+        "scene",
         "render",
         "edit",
         "generate",

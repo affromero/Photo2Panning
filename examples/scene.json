@@ -1,0 +1,10 @@
+{
+  "kind": "scene",
+  "source": "examples/media/waterfall.jpg",
+  "output": "waterfall.ply",
+  "metadata": "waterfall-scene.json",
+  "num_tokens": 1800,
+  "max_edge": 1920,
+  "device": "mps",
+  "overwrite": false
+}
