@@ -8,8 +8,8 @@ jobs:
   macos:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           version: '0.13.5'
           enable-cache: true
@@ -26,8 +26,8 @@ jobs:
   models-import:
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.2
         with:
           version: '0.13.5'
           enable-cache: true
