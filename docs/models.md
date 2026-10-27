@@ -216,6 +216,20 @@ Both paths retain unmasked source pixels exactly.
 Masks and masked edits require lossless PNG. Other generated images
 support PNG, JPEG, and WebP.
 
+The [README examples](../readme.md#change-the-season-with-flux) show two
+actual 768 by 512 edits using 4-bit FLUX 3, 16 steps, and seed 7.
+The [winter job](../examples/generate.json) edits the whole reference.
+For a local sky change, run the [SAM job](../examples/mask.json) followed
+by the [masked edit](../examples/generate-masked.json). The cyan overlay
+shows the selected sky on the photo. The job uses its binary PNG mask.
+
+On this 36 GB M3 Max with cached weights, the winter edit took 85.79
+seconds and peaked at 23.25 GB physical memory. The sky edit took 73.04
+seconds and peaked at 23.65 GB. CPU sky segmentation took 23.86 seconds.
+All 277,164 pixels outside the sky selection stayed byte-identical in the
+final PNG. The JPEG comparison panels are for display; use the lossless
+PNGs when checking preservation.
+
 LoRA adapters are explicit request options in the Python API and JSON
 jobs. Each adapter supplies a `path` and a numeric `scale`. Use adapters
 trained for the selected model architecture.

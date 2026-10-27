@@ -1,0 +1,12 @@
+{
+  "kind": "generate",
+  "source": "examples/media/waterfall-reference.png",
+  "mask": "waterfall-sky-mask.png",
+  "output": "waterfall-sunset.png",
+  "prompt": "Keep the exact same Faroe Islands coastal landscape, waterfall, mountain, village, shoreline, and camera composition. Replace the grey sky with spectacular vivid magenta and violet sunset clouds, glowing orange and gold near the low sun at the left horizon. Sculpted dramatic clouds across the entire sky. Retain the original detailed cliffs and waterfall, and warm golden evening light. Photorealistic landscape photography.",
+  "model": "flux3",
+  "quantization": 4,
+  "seed": 7,
+  "steps": 16,
+  "size": {"width": 768, "height": 512}
+}

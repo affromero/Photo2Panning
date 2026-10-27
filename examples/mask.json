@@ -1,8 +1,8 @@
 {
   "kind": "mask",
-  "source": "coast.jpg",
-  "output": "person-mask.png",
-  "prompt": "person",
+  "source": "examples/media/waterfall-reference.png",
+  "output": "waterfall-sky-mask.png",
+  "prompt": "sky",
   "device": "cpu",
   "threshold": 0.3,
   "merge": true

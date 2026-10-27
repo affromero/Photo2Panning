@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.3.1] - 2026-10-26
+
+### Changed
+
+- Show complete pan and zoom animations beside their source photos, and
+  isolate a stronger 3D camera excursion in its own inline preview.
+  ([#3](https://github.com/affromero/Photo2Panning/pull/3))
+- Show actual local FLUX 3 winter and sunset edits, including the SAM sky
+  selection over the original photo and the finished masked result.
+  ([#3](https://github.com/affromero/Photo2Panning/pull/3))
+- Bundle the public reference and output images with runnable JSON jobs,
+  replacing missing example inputs and documenting mask preservation.
+  ([#3](https://github.com/affromero/Photo2Panning/pull/3))
+
 ## [0.3.0] - 2026-10-26
 
 ### Added
@@ -62,5 +76,6 @@
   frames, strict mypy, ty, Ruff, and repository quality hooks.
   ([#1](https://github.com/affromero/Photo2Panning/pull/1))
 
+[0.3.1]: https://github.com/affromero/Photo2Panning/releases/tag/v0.3.1
 [0.3.0]: https://github.com/affromero/Photo2Panning/releases/tag/v0.3.0
 [0.2.0]: https://github.com/affromero/Photo2Panning/releases/tag/v0.2.0

@@ -1,10 +1,10 @@
 {
   "kind": "edit",
-  "source": "coast.jpg",
-  "output": "coast-edited.png",
+  "source": "examples/media/waterfall.jpg",
+  "output": "waterfall-edited.png",
   "operations": [
-    {"op": "crop", "left": 80, "top": 0, "right": 1600, "bottom": 1000},
-    {"op": "resize", "size": {"width": 1280, "height": 720}},
-    {"op": "adjust", "brightness": 1.1, "contrast": 1.05, "saturation": 0.9}
+    {"op": "crop", "left": 680, "top": 0, "right": 1640, "bottom": 1280},
+    {"op": "resize", "size": {"width": 450, "height": 600}},
+    {"op": "adjust", "brightness": 1.12, "contrast": 1.08, "saturation": 1.1}
   ]
 }

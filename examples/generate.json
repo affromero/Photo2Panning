@@ -1,11 +1,11 @@
 {
   "kind": "generate",
-  "source": "coast.jpg",
-  "output": "coast-evening.png",
-  "prompt": "The same rocky coast at dusk, warm light on the cliffs, calm sea, photograph",
+  "source": "examples/media/waterfall-reference.png",
+  "output": "waterfall-winter.png",
+  "prompt": "Transform this exact landscape photograph into a deep snowy winter. Keep the same coastal cliffs, the same waterfall, mountain, village, shoreline, and camera composition. Cover the grass and mountain with thick fresh white snow, add icicles to the cliff faces, and show cold turquoise sea under a pale blue winter sky. Natural photographic detail.",
   "model": "flux3",
   "quantization": 4,
   "seed": 7,
   "steps": 16,
-  "size": {"width": 512, "height": 512}
+  "size": {"width": 768, "height": 512}
 }
