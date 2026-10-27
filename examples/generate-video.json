@@ -1,15 +1,15 @@
 {
   "kind": "generate-video",
-  "first_frame": "examples/media/waterfall-transition-first.png",
-  "last_frame": "examples/media/waterfall-transition-last.png",
-  "output": "waterfall-first-last.mp4",
-  "prompt": "The camera pans slowly and continuously to the right across the coastal waterfall in the Faroe Islands, moving from the first view toward the last view. The same mountain, village, green cliffs, waterfall, and coastline remain stable and recognizable throughout the shot. The waterfall flows naturally and clouds drift gently. Golden evening light stays consistent. Smooth continuous camera movement through one uninterrupted shot.",
-  "negative_prompt": "cuts, sudden jumps, scene changes, changing coastline, distorted mountain, disappearing waterfall, buildings appearing, changing seasons, snow, text, watermark",
-  "size": {"width": 512, "height": 896},
+  "first_frame": "examples/media/bean-transition-first.png",
+  "last_frame": "examples/media/bean-transition-last.png",
+  "output": "bean-transition.mp4",
+  "prompt": "A continuous photorealistic camera shot of the polished Cloud Gate sculpture in Chicago, connecting the first reference photograph to the last reference photograph. The camera glides in a gentle physical arc around the sculpture, moving from the oblique three-quarter composition with the opening offset to the left into the more frontal composition with the opening centered. The whole sculpture changes perspective smoothly as a solid three-dimensional object. Reflections of the skyline, trees, sky, and plaza slide naturally across its curved mirrored surface. The foreground paving and background buildings shift coherently with subtle parallax as the camera travels. Preserve the recognizable sculpture and surrounding architecture. Stable daylight and photographic detail throughout. One uninterrupted camera movement arriving at the final reference composition.",
+  "negative_prompt": "cross dissolve, crossfade, scene cut, sudden jump, scene morph, melting sculpture, warped architecture, duplicated sculpture, flicker, exposure flash, text, watermark, extra people",
+  "size": {"width": 896, "height": 512},
   "frames": 49,
   "fps": 24,
   "steps": 20,
   "refine_steps": 3,
-  "seed": 0,
+  "seed": 43,
   "low_memory": true
 }

@@ -122,21 +122,25 @@ instead of downloading the defaults.
 uv run --extra video pic2panning run examples/generate-video.json
 ```
 
-The bundled job uses two nearby crops of the same waterfall photo at
-512 by 896, with 49 frames at 24 fps. It includes the complete prompt,
-negative prompt, seed, and step counts. The README shows the input guides
-and the generated transition together.
+The bundled job connects two independent Pexels views of Cloud Gate at
+896 by 512, with 49 frames at 24 fps. It includes the complete prompt,
+negative prompt, seed, and step counts. The prompt describes a camera arc
+around the sculpture, with changing reflections and background parallax.
+The README shows both input guides and the generated transition together.
 
 Both stages receive guides at frame 0 and the last frame. These guides
 influence appearance and motion; generated endpoints can differ from the
 original pixels. Choose overlapping views of the same scene when the goal
-is a continuous camera move. The bundled public photos illustrate the API.
+is a continuous camera move. Guides do not guarantee a geometric morph
+between unrelated scenes. In local tests, the waterfall-to-aurora pair
+produced a brief dissolve followed by aurora animation, even with an
+explicit transformation prompt. That result was rejected for the demo.
 
 Inputs receive EXIF orientation and a centered crop matching the requested
 aspect ratio. Use `edit` to crop each input before generation when the
 centered framing removes a landmark you need to retain. Both output
 dimensions must be multiples of 64. `frames` must be at least 9 and equal
-`8k + 1`, such as 49, 65, or 97. Frame rate ranges from 1 to 60. Duration
+`8k + 1`, such as 49, 65, 81, or 97. Frame rate ranges from 1 to 60. Duration
 is the frame count divided by frame rate; 65 frames at 24 fps take about
 2.71 seconds of playback.
 
@@ -151,13 +155,13 @@ Generation writes a silent MP4. To add sound afterward, use the ordinary
 count, frame rate, duration, and absence of audio are checked before the
 file is published. Inference errors propagate to the caller.
 
-On a 36 GB M3 Max Mac, one local smoke run generated a silent 576 by 1024
-clip with 49 frames at 24 fps (2.042 seconds of playback). It used 20
-first-stage steps and 3 refinement steps and completed in 16 minutes,
-57 seconds. Peak Metal memory was 12.95 GiB; peak physical memory was
-15.6 GiB. Inspection of all 49 frames found a coherent scene with no
-obvious jumps. This single run checks execution and that clip's continuity;
-output quality depends on the input images and prompt.
+On a 36 GB M3 Max Mac, the bundled Cloud Gate job generated its silent
+896 by 512 clip in 617.78 seconds (10 minutes, 18 seconds). Peak physical
+memory was 16.71 GB. All 49 frames were inspected: perspective changes
+throughout the shot without an obvious cut or dissolve. A generated pole
+crosses the foreground, and building details wobble. This demonstrates a
+local camera transition; it does not guarantee faithful geometry in
+unseen views. Output quality depends on the images and prompt.
 
 Sources: [pinned LTX pipeline](https://github.com/dgrauet/ltx-2-mlx/tree/f14dbf930626eafd86b9f29030ac7a23b4e914b8),
 [LTX checkpoint](https://huggingface.co/dgrauet/ltx-2.3-mlx-q4/tree/56a5866d638ecfe37c54d348e88938235185c2d4),
@@ -250,18 +254,14 @@ loading. Peak memory footprint was 10.98 GB. A reference edit at that size
 and 8 steps completed in 16.90 seconds with an 11.34 GB peak. Use 512 by
 512 and 16 steps for normal FLUX 3 edits; the smaller runs check execution.
 
-The [person-removal example](../readme.md#remove-a-person-with-sam-and-flux-fill)
-uses a padded SAM mask and FLUX 1 Fill to reconstruct an empty beach.
-At 768 by 512 with 4-bit weights, seed 7, 28 steps, and guidance 30,
-the accepted Fill run took 207.86 seconds and peaked at 27.02 GB physical
-memory. All 377,129 black-mask source pixels stayed identical in the PNG.
+The [abandoned-city example](../readme.md#abandon-a-busy-street-with-flux-3)
+uses FLUX 3 reference editing to remove foreground pedestrians and traffic
+from a crowded street and add signs of abandonment. At 1024 by 688,
+4-bit weights, seed 7, and 16 steps, it took 191.77 seconds and peaked at
+29.28 GB physical memory. Two small distant vehicles remain visible;
+targeted cleanup trials did not remove them. This is a whole-image edit.
 
-FLUX 1 Fill 4-bit also completed a 256 by 256 masked edit on this Mac.
-That four-step execution check used guidance 30 and peaked at 17.42 GB.
-The edited region changed and unselected pixels stayed identical, but
-four steps produced a rough fill. Use the default 28 steps for ordinary
-Fill requests, or tune within 25 to 50 steps. Other model variants and
-larger images have different memory requirements.
+Other model variants and larger images have different memory requirements.
 
 ## Text-guided segmentation
 

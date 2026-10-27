@@ -1,0 +1,11 @@
+{
+  "kind": "generate",
+  "source": "examples/media/street-source.png",
+  "output": "empty-street.png",
+  "prompt": "Remove every person and every vehicle from this photograph, including the foreground pedestrians, people on both sidewalks, yellow taxis, SUVs, police car, delivery truck, buses, bicycles, and all distant traffic. Reconstruct the road, crossing stripes, curbs, sidewalks, and storefronts wherever they were hidden. A photorealistic deserted Manhattan avenue after humanity has vanished, photographed from exactly the same camera position and with the same lens and framing as the reference. Preserve the recognizable tall stone and brick buildings, windows, shops, streetlights, traffic signals, and central vanishing point. The broad white zebra crossing fills the foreground. Every lane and both sidewalks are completely empty, with a clear unobstructed view down the entire avenue. Subtle cracks in the asphalt, sparse weeds along the curbs, weathered facades, and a few windblown leaves suggest years of abandonment. The buildings remain standing and recognizable. Moody overcast light, a slate-gray sky, cool restrained colors, fine realistic textures, coherent perspective, and natural photographic detail.",
+  "model": "flux3",
+  "quantization": 4,
+  "seed": 7,
+  "steps": 16,
+  "size": {"width": 1024, "height": 688}
+}

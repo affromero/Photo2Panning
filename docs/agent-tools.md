@@ -155,12 +155,13 @@ exactly in the output PNG. FLUX 1 Fill receives the mask during generation.
 Choose it when masked inpainting is needed. All masked requests require
 matching source, mask, and output dimensions.
 
-For the bundled person-removal example, run
-[mask-person.json](../examples/mask-person.json), then
-[remove-person.json](../examples/remove-person.json). The first selects
-the person and includes 12 pixels of padding. The second uses FLUX 1 Fill
-to reconstruct the empty beach inside that prepared mask. Black pixels in
-the saved mask retain the source exactly in the output PNG.
+For the bundled abandoned-city example, run
+[edit-empty-street.json](../examples/edit-empty-street.json). It uses
+FLUX 3 to remove foreground pedestrians and traffic from a busy street
+and add signs of abandonment. This reference edit has no mask. Changes
+across the entire image are allowed; there is no exact preservation
+guarantee for the buildings. Two small vehicles remain in the distance.
+Inspect small objects before claiming complete removal.
 
 ### Reconstruct a scene, then move the camera
 
@@ -247,16 +248,22 @@ guide at frame 0 and another at `frames - 1`. Generated endpoints can
 differ from the input pixels. Prefer overlapping views of the same scene
 for continuous camera movement.
 
-The [bundled job](../examples/generate-video.json) uses the inspected
-waterfall guide pair shown in the README, with its complete prompt,
+The [bundled job](../examples/generate-video.json) connects two independent
+Pexels views of Cloud Gate shown in the README, with its complete prompt,
 negative prompt, and model settings:
 
 ```bash
 uv run --extra video pic2panning run examples/generate-video.json
 ```
 
-Its explicit size is 512 by 896 with 49 frames at 24 fps. Keep both guide
-paths and the prompt together when adapting this example.
+Its explicit size is 896 by 512 with 49 frames at 24 fps. The prompt asks
+for a continuous camera arc between the two viewpoints, with changing
+reflections and background parallax. Keep both guide paths and the prompt
+together when adapting this example. Choose images with shared geometry
+for a camera transition. Unrelated scenes can produce dissolves even when
+the prompt asks for a geometric morph. Inspect the whole result for cuts,
+dissolves, invented objects, and unstable geometry. The bundled example
+includes a generated foreground pole and wobbling building details.
 
 Input images receive EXIF orientation and a centered crop to fit. Use
 `EditRequest` first for another crop. Width and height must be multiples
