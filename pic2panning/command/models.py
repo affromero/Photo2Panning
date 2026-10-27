@@ -83,6 +83,9 @@ class MaskCommand(OutputCommand):
     threshold: float = 0.3
     """Minimum detection confidence, greater than 0 and at most 1."""
 
+    padding: int = 0
+    """Expand selections by 0 to 128 pixels in each direction before saving."""
+
     device: Device = Device.CPU
     """Explicit CPU execution for the small local segmentation models."""
 
@@ -96,6 +99,7 @@ class MaskCommand(OutputCommand):
             output=self.output,
             prompt=self.prompt,
             threshold=self.threshold,
+            padding=self.padding,
             device=self.device,
             merge=not self.separate,
             overwrite=self.overwrite,

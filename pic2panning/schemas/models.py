@@ -168,6 +168,9 @@ class MaskRequest(PydanticBaseModel):
     threshold: Annotated[float, Field(gt=0, le=1)] = 0.3
     """Minimum object-detection confidence accepted for segmentation."""
 
+    padding: Annotated[int, Field(ge=0, le=128, strict=True)] = 0
+    """Expand each selection by this many pixels along both image axes."""
+
     merge: bool = True
     """Union masks into one output; false saves separate object masks."""
 

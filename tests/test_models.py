@@ -8,6 +8,7 @@ from typing import override
 
 import pytest
 from PIL import Image
+from pydantic import ValidationError
 
 from pic2panning.backends.contracts import ImageBackend, MaskBackend
 from pic2panning.errors import MediaError
@@ -71,6 +72,19 @@ class EmptyMaskBackend(MaskBackend):
     ) -> tuple[Image.Image, ...]:
         """Report an empty detection result."""
         return ()
+
+
+class CenterMaskBackend(MaskBackend):
+    """A single detected pixel at the image center."""
+
+    @override
+    def masks(
+        self, request: MaskRequest, image: Image.Image
+    ) -> tuple[Image.Image, ...]:
+        """Return a small selection with room to expand on every side."""
+        selection = Image.new("L", image.size)
+        selection.putpixel((image.width // 2, image.height // 2), 255)
+        return (selection,)
 
 
 class BlankMaskBackend(MaskBackend):
@@ -221,7 +235,90 @@ def test_mask_job_merges_matching_objects(tmp_path: Path) -> None:
         assert image.getpixel((0, 0)) == 255
         assert image.getpixel((31, 15)) == 255
         assert image.getpixel((16, 8)) == 0
+        assert image.getpixel((1, 0)) == 0
+        assert image.getpixel((30, 15)) == 0
     assert result.outputs == (str(output),)
+
+
+@pytest.mark.parametrize(
+    ("source_size", "padding", "bounds", "selected_count"),
+    [
+        ((9, 9), 2, (2, 2, 7, 7), 25),
+        ((5, 5), 128, (0, 0, 5, 5), 25),
+    ],
+)
+def test_mask_padding_expands_the_selected_area_without_resizing(
+    tmp_path: Path,
+    source_size: tuple[int, int],
+    padding: int,
+    bounds: tuple[int, int, int, int],
+    selected_count: int,
+) -> None:
+    """Padding includes surrounding pixels while retaining binary geometry."""
+    source = tmp_path / "source.png"
+    output = tmp_path / "mask.png"
+    with Image.new("RGB", source_size, "blue") as image:
+        image.save(source)
+    original = source.read_bytes()
+    mask(
+        MaskRequest(
+            source=str(source),
+            output=str(output),
+            prompt="object",
+            padding=padding,
+        ),
+        CenterMaskBackend(),
+    )
+    with Image.open(output) as selection:
+        assert selection.mode == "L"
+        assert selection.size == source_size
+        assert selection.getbbox() == bounds
+        assert selection.tobytes().count(255) == selected_count
+        assert set(selection.tobytes()) <= {0, 255}
+    assert source.read_bytes() == original
+
+
+@pytest.mark.parametrize("merge", [False, True])
+def test_padded_masks_clip_at_image_edges_in_both_output_modes(
+    tmp_path: Path, *, merge: bool
+) -> None:
+    """Corner selections expand inward without adding image pixels."""
+    source = tmp_path / "source.png"
+    output = tmp_path / "mask.png"
+    with Image.new("RGB", (9, 9)) as image:
+        image.save(source)
+    result = mask(
+        MaskRequest(
+            source=str(source),
+            output=str(output),
+            prompt="objects",
+            padding=2,
+            merge=merge,
+        ),
+        SeparateMaskBackend(),
+    )
+    selected_counts = []
+    for path in result.outputs:
+        with Image.open(path) as selection:
+            assert selection.size == (9, 9)
+            assert set(selection.tobytes()) == {0, 255}
+            assert selection.getpixel((4, 4)) == 0
+            selected_counts.append(selection.tobytes().count(255))
+    assert selected_counts == ([18] if merge else [9, 9])
+
+
+@pytest.mark.parametrize("padding", [-1, 129, 1.5, True, "8"])
+def test_mask_padding_rejects_invalid_pixel_expansion(padding: object) -> None:
+    """Only bounded integer padding values reach the model tool."""
+    with pytest.raises(ValidationError, match="padding"):
+        MaskRequest.model_validate(
+            {
+                "source": "source.png",
+                "output": "mask.png",
+                "prompt": "object",
+                "padding": padding,
+            }
+        )
 
 
 def test_mask_job_saves_separate_objects_without_merging(
