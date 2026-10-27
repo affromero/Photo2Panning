@@ -14,20 +14,23 @@ JSON jobs.
 
 [Quick start](#quick-start) · [Demos](#demos) ·
 [FLUX edits](#change-the-season-with-flux) ·
-[Object removal](#remove-a-person-with-sam-and-flux-fill) · [Features](#features) ·
+[Photo transition](#connect-two-pexels-photos) ·
+[Abandoned city](#abandon-a-busy-street-with-flux-3) · [Features](#features) ·
 [Python](#python-library) · [LLM tools](#llm-tools-and-json-jobs) ·
 [Local models](#local-models)
 
 | Photo pan | Zoom and return |
 | :---: | :---: |
 | [<img src="examples/media/waterfall-pan.gif" alt="Complete portrait pan across the waterfall and coastal cliffs" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-pan.mp4) | [<img src="examples/media/mountain-zoom.gif" alt="Complete zoom into the snowy mountains and return to the original view" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/mountain-zoom.mp4) |
-| **3D camera excursion** | **First to last frame** |
-| [<img src="examples/media/waterfall-camera.gif" alt="A 3D camera moves right and forward, then returns, with foreground and background moving differently" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-camera-excursion.mp4) | <img src="examples/media/waterfall-first-last.gif" alt="Local LTX video generation guided by the first and last waterfall views" width="252"/> |
+| **3D camera excursion** | **Photo-to-photo transition** |
+| [<img src="examples/media/waterfall-camera.gif" alt="A 3D camera moves right and forward, then returns, with foreground and background moving differently" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-camera-excursion.mp4) | <img src="examples/media/bean-transition-first.png" alt="First guide: the oblique Cloud Gate photo" width="252"/><br/><img src="examples/media/bean-transition.gif" alt="A generated camera arc connects two different Pexels views of Cloud Gate" width="252"/><br/><img src="examples/media/bean-transition-last.png" alt="Last guide: the frontal Cloud Gate photo" width="252"/> |
 
 The pan and zoom previews show their complete motion; the camera preview
 isolates its 3D excursion. Those examples link to 1080 by 1920, 60 fps
-MP4s. The generated transition uses first and last image guides at
-512 by 896 and 24 fps. The examples below show the inputs and results.
+MP4s. The transition card shows its first guide, generated move, and last
+guide from top to bottom. It uses two independent Pexels photos of Cloud
+Gate at 896 by 512 and 24 fps. The examples below show the inputs and
+results.
 
 ## Quick start
 
@@ -173,27 +176,25 @@ conditioned on the masked area itself, select `flux1-fill`. See
 
 </details>
 
-### Remove a person with SAM and FLUX Fill
+### Abandon a busy street with FLUX 3
 
-[<img src="examples/media/remove-person-comparison.jpg" alt="Original beach photo, the person selected by SAM with padding, and the finished FLUX Fill result with the person removed" width="800"/>](examples/media/remove-person-result.png)
+[<img src="examples/media/street-comparison.jpg" alt="A crowded Manhattan crosswalk beside the FLUX 3 edit with foreground pedestrians and traffic removed, revealing an abandoned avenue" width="800"/>](examples/media/street-result.png)
 
-SAM selects the person. The mask includes 12 pixels of padding around
-the selection to cover its outline. FLUX 1 Fill reconstructs the sand,
-sea, and sky inside that region. Pixels outside the saved mask remain
-identical in the final PNG.
+Turn a crowded Manhattan avenue into an abandoned city. FLUX 3 removes
+the foreground pedestrians and traffic, reconstructs the road and
+sidewalks, and adds cracked pavement, curbside weeds, and moody light.
+The same buildings, viewpoint, and foreground crossing remain recognizable.
 
 ```bash
-uv run --extra models pic2panning run examples/mask-person.json
-uv run --extra models pic2panning run examples/remove-person.json
+uv run --extra models pic2panning run examples/edit-empty-street.json
 ```
 
-The [selection job](examples/mask-person.json) runs on the CPU. The
-[removal job](examples/remove-person.json) uses 4-bit Fill, 28 steps,
-and guidance 30 at 768 by 512. Mask padding defaults to zero; the CLI
-option `--padding 12` expands it for this example. Inspect the selection
-to include edges and any shadows that need removal.
+The [job](examples/edit-empty-street.json) uses local FLUX 3 with 4-bit
+weights, 16 steps, and seed 7 at 1024 by 688. It edits the whole reference
+image without a segmentation mask, so pixels across the image can change.
+Two small vehicles remain in the distance in this result.
 
-Photo: [RECALL FROM THE FUTURE, Pexels](https://www.pexels.com/photo/man-standing-alone-on-beach-13953040/).
+Photo: [Clément Proust, Pexels](https://www.pexels.com/photo/busy-new-york-city-street-scene-with-crosswalk-36286355/).
 
 ## Features
 
@@ -396,17 +397,21 @@ Use a mask with `flux1-fill` or FLUX 3; see
 Some weights require Hugging Face authentication and acceptance of the
 model terms. See [local model setup and measured runs](docs/models.md).
 
-### Generate a shot between two photos
+### Connect two Pexels photos
 
 | First image guide | Generated transition | Last image guide |
 | :---: | :---: | :---: |
-| <img src="examples/media/waterfall-transition-first.png" alt="First waterfall crop used to guide local video generation" width="180"/> | <img src="examples/media/waterfall-first-last.gif" alt="Generated motion between the two nearby waterfall views" width="180"/> | <img src="examples/media/waterfall-transition-last.png" alt="Last waterfall crop used to guide local video generation" width="180"/> |
+| <img src="examples/media/bean-transition-first.png" alt="First Pexels guide: a three-quarter view of Cloud Gate" width="240"/> | <img src="examples/media/bean-transition.gif" alt="Generated camera movement from the three-quarter view toward the front of Cloud Gate" width="240"/> | <img src="examples/media/bean-transition-last.png" alt="Last Pexels guide: the frontal view of Cloud Gate's arch" width="240"/> |
 
 The `video` extra adds local LTX-2.3 generation on MLX. Its two stages use
-the first and last photos as image guides. Generated endpoints can differ
-from the input pixels. For a continuous camera move, choose adjacent views
-of the same scene. This example uses two nearby crops of the public
-waterfall photo.
+the first and last photos as image guides. These are two independent
+photos of Chicago's Cloud Gate, taken from different viewpoints. The job
+asks for a camera arc from the three-quarter view toward the front of
+the sculpture, with changing reflections and background parallax.
+Generated endpoints can differ from the input pixels.
+
+This run includes a generated pole crossing the foreground and wobbling
+building details. Inspect intermediate frames as well as the endpoints.
 
 ```bash
 uv sync --frozen --extra video
@@ -414,13 +419,17 @@ uv run --extra video pic2panning run examples/generate-video.json
 ```
 
 The [job](examples/generate-video.json) includes the prompt, seed, and
-both guide paths. Its output is a silent 512 by 896 MP4 with 49 frames
-at 24 fps. Inputs are center-cropped to fit; use `edit` first to choose
-another framing. Width and height must
-be multiples of 64, and frame counts must be `8k + 1` with at least 9
-frames. The first default run downloads about 40 GB of model weights.
+both guide paths. Its output is a silent 896 by 512 MP4 with 49 frames
+at 24 fps, lasting about 2.042 seconds. Inputs are center-cropped to fit; use
+`edit` first to choose another framing. Width and height must be multiples
+of 64, and frame counts must be `8k + 1` with at least 9 frames. The first
+default run downloads about 40 GB of model weights.
 Local input images stay on this Mac. See
 [video models and controls](docs/models.md#first-and-last-frame-video).
+
+Photos: [Enrique Cortes](https://www.pexels.com/photo/modern-cloud-gate-sculpture-in-a-chicago-17010678/)
+and [Alberto E](https://www.pexels.com/photo/cloud-gate-chicago-8877910/),
+under the [Pexels license](https://www.pexels.com/license/).
 
 ## Development
 

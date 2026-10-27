@@ -20,12 +20,11 @@ local geometry reconstruction, and quantized models on Apple Silicon.
   reference into a snowy winter scene with quantized FLUX 3.
 - [Masked edit job](examples/generate-masked.json): Replace the sky selected
   by the mask job, retaining pixels outside its black-and-white PNG mask.
-- [Person selection job](examples/mask-person.json): Select the person in a
-  bundled public beach photo, including 12 pixels of mask padding.
-- [Person removal job](examples/remove-person.json): Reconstruct the empty
-  beach with FLUX 1 Fill inside the prepared mask.
-- [Video generation job](examples/generate-video.json): Local LTX shot with
-  first and last image guides, using nearby crops of the public waterfall.
+- [Abandoned-city job](examples/edit-empty-street.json): Edit a busy public
+  street photo with FLUX 3, removing foreground pedestrians and traffic
+  and adding signs of abandonment.
+- [Video generation job](examples/generate-video.json): Local LTX camera
+  transition between two independent Pexels views of Cloud Gate.
 - [Mask job](examples/mask.json): Select the sky in the same public reference
   using Grounding DINO and SAM on the CPU.
 - [Soundtrack example](examples/add_music.py): Replace a finished video's
@@ -47,11 +46,14 @@ in the final PNG; the cyan README overlay is a display of the selection.
 For the bundled edit workflow, run examples/generate.json for the winter
 edit, or examples/mask.json then examples/generate-masked.json for the sky.
 The paired sky requests use the same 768 by 512 reference dimensions.
-For object removal, run examples/mask-person.json then
-examples/remove-person.json. Mask padding expands selections along each
-axis, from 0 to 128 pixels (default 0), before saving or merging. The CLI
-flag is --padding. Inspect the prepared mask for missed edges and shadows;
-black pixels outside that mask retain the original in the final PNG.
+For the abandoned-city workflow, run examples/edit-empty-street.json.
+It uses FLUX 3 reference editing without a mask and can change the whole
+image. Two small distant vehicles remain; inspect outputs before claiming
+complete removal. For masked workflows, padding expands selections along
+each axis, from 0 to 128 pixels
+(default 0), before saving or merging. The CLI flag is --padding. Inspect
+the prepared mask for missed edges and shadows; black pixels outside that
+mask retain the original in the final PNG.
 Scene requests require source, output (.ply), and metadata (.json), with
 explicit mps or cpu execution and a 1200 to 3600 token budget (default 1800).
 max_edge limits the geometry image to 256 to 4096 pixels on its longest
@@ -62,3 +64,7 @@ verify source identity before rendering. PLY and calibration can be reused
 for different motion settings. Camera jobs return the ordinary JobResult.
 Generated video is silent. Endpoint guides influence generation without
 promising identical input pixels in the output.
+Use views with shared geometry for a camera transition. A prompt does not
+guarantee a geometric morph between unrelated scenes; inspect all frames
+for cuts, dissolves, invented objects, and unstable geometry before
+accepting an output.
