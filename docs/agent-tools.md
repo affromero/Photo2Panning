@@ -40,12 +40,12 @@ every size. Choose portrait output with `{"width": 1080, "height": 1920}`.
   "clips": [
     {
       "kind": "image",
-      "source": "coast.jpg",
+      "source": "examples/media/waterfall.jpg",
       "duration": 5,
       "motion": "panning-lr"
     }
   ],
-  "output": "coast.mp4",
+  "output": "waterfall.mp4",
   "size": {"width": 1080, "height": 1920},
   "fps": 30,
   "encoding": {"crf": 16, "preset": "slow"}
@@ -91,12 +91,12 @@ Unspecified adjustment factors remain at `1`.
 ```json
 {
   "kind": "edit",
-  "source": "coast.jpg",
-  "output": "coast-edited.png",
+  "source": "examples/media/waterfall.jpg",
+  "output": "waterfall-edited.png",
   "operations": [
-    {"op": "crop", "left": 80, "top": 0, "right": 1600, "bottom": 1000},
-    {"op": "resize", "size": {"width": 1280, "height": 720}},
-    {"op": "adjust", "brightness": 1.1, "saturation": 0.9}
+    {"op": "crop", "left": 680, "top": 0, "right": 1640, "bottom": 1280},
+    {"op": "resize", "size": {"width": 450, "height": 600}},
+    {"op": "adjust", "brightness": 1.12, "contrast": 1.08, "saturation": 1.1}
   ]
 }
 ```
@@ -117,6 +117,36 @@ and Schnell reject guidance controls. Explicit steps override the default.
 Image outputs support PNG, JPEG, and WebP. Masks and masked edits require
 PNG so their pixel values remain lossless. Unsupported output suffixes
 fail request validation before model weights load.
+
+### Edit a whole image or a selected region
+
+The bundled [reference edit](../examples/generate.json) transforms the
+public waterfall photo into winter. Run it with the `models` extra:
+
+```bash
+uv run --extra models pic2panning run examples/generate.json
+```
+
+For a selected sky edit, run the
+[SAM sky job](../examples/mask.json), then the
+[masked FLUX job](../examples/generate-masked.json):
+
+```bash
+uv run --extra models pic2panning run examples/mask.json
+uv run --extra models pic2panning run examples/generate-masked.json
+```
+
+Both jobs reference `examples/media/waterfall-reference.png`, a bundled
+768 by 512 copy of the public source. The first saves the binary mask as
+`waterfall-sky-mask.png`; the second uses that path. The cyan selection
+overlay in the README is a visualization, rather than the model input.
+
+An unmasked FLUX 3 reference edit can change the whole image. In the
+masked FLUX 3 path, the model edits the reference and the library composites
+the result using the mask. Black mask pixels retain the original pixels
+exactly in the output PNG. FLUX 1 Fill receives the mask during generation.
+Choose it when masked inpainting is needed. All masked requests require
+matching source, mask, and output dimensions.
 
 ### Reconstruct a scene, then move the camera
 

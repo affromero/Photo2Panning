@@ -3,13 +3,13 @@
   "clips": [
     {
       "kind": "image",
-      "source": "coast.jpg",
+      "source": "examples/media/waterfall.jpg",
       "duration": 5,
       "motion": "panning-lr"
     },
     {
       "kind": "image",
-      "source": "forest.jpg",
+      "source": "examples/media/mountains.jpg",
       "duration": 3,
       "motion": "zoom-in"
     }

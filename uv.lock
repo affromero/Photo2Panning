@@ -839,7 +839,7 @@ wheels = [
 
 [[package]]
 name = "pic2panning"
-version = "0.3.0"
+version = "0.3.1"
 source = { editable = "." }
 dependencies = [
     { name = "klogr", marker = "platform_machine == 'arm64' and sys_platform == 'darwin'" },

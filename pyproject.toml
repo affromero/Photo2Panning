@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pic2panning"
-version = "0.3.0"
+version = "0.3.1"
 description = "Photo motion, video processing, and local image editing on Apple Silicon."
 readme = "readme.md"
 requires-python = ">=3.14,<3.15"
