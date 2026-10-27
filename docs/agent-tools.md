@@ -247,22 +247,16 @@ guide at frame 0 and another at `frames - 1`. Generated endpoints can
 differ from the input pixels. Prefer overlapping views of the same scene
 for continuous camera movement.
 
-```json
-{
-  "kind": "generate-video",
-  "first_frame": "examples/media/waterfall.jpg",
-  "last_frame": "examples/media/mountains.jpg",
-  "output": "generated.mp4",
-  "prompt": "A continuous camera move across the landscape toward the final view.",
-  "size": {"width": 576, "height": 1024},
-  "frames": 65,
-  "fps": 24,
-  "steps": 20,
-  "refine_steps": 3,
-  "seed": 0,
-  "low_memory": true
-}
+The [bundled job](../examples/generate-video.json) uses the inspected
+waterfall guide pair shown in the README, with its complete prompt,
+negative prompt, and model settings:
+
+```bash
+uv run --extra video pic2panning run examples/generate-video.json
 ```
+
+Its explicit size is 512 by 896 with 49 frames at 24 fps. Keep both guide
+paths and the prompt together when adapting this example.
 
 Input images receive EXIF orientation and a centered crop to fit. Use
 `EditRequest` first for another crop. Width and height must be multiples
