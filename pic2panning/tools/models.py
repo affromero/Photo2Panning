@@ -3,7 +3,7 @@
 from contextlib import ExitStack
 
 from klogr.path import get_suffix, path_dirname, path_join, path_stem
-from PIL import Image, ImageChops
+from PIL import Image, ImageChops, ImageFilter
 
 from pic2panning.backends.contracts import ImageBackend, MaskBackend
 from pic2panning.backends.mflux import MfluxBackend
@@ -130,6 +130,15 @@ def mask(
                 "object. Adjust the prompt or select a different model."
             )
             raise MediaError(message)
+        if request.padding:
+            normalized = tuple(
+                images.enter_context(
+                    selection.filter(
+                        ImageFilter.MaxFilter(2 * request.padding + 1)
+                    )
+                )
+                for selection in normalized
+            )
         outputs: tuple[str, ...]
         if request.merge:
             merged = images.enter_context(Image.new("L", image.size))

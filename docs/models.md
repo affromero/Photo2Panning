@@ -119,13 +119,13 @@ text encoder. Local input images stay on the Mac. `--weights` and
 instead of downloading the defaults.
 
 ```bash
-uv run --extra video pic2panning generate-video \
-  --first-frame examples/media/waterfall.jpg \
-  --last-frame examples/media/mountains.jpg \
-  --output generated.mp4 \
-  --prompt "A continuous camera move across the landscape toward the final view." \
-  --size 576 1024 --frames 65 --fps 24 --steps 20 --refine-steps 3 --seed 0
+uv run --extra video pic2panning run examples/generate-video.json
 ```
+
+The bundled job uses two nearby crops of the same waterfall photo at
+512 by 896, with 49 frames at 24 fps. It includes the complete prompt,
+negative prompt, seed, and step counts. The README shows the input guides
+and the generated transition together.
 
 Both stages receive guides at frame 0 and the last frame. These guides
 influence appearance and motion; generated endpoints can differ from the
@@ -250,6 +250,12 @@ loading. Peak memory footprint was 10.98 GB. A reference edit at that size
 and 8 steps completed in 16.90 seconds with an 11.34 GB peak. Use 512 by
 512 and 16 steps for normal FLUX 3 edits; the smaller runs check execution.
 
+The [person-removal example](../readme.md#remove-a-person-with-sam-and-flux-fill)
+uses a padded SAM mask and FLUX 1 Fill to reconstruct an empty beach.
+At 768 by 512 with 4-bit weights, seed 7, 28 steps, and guidance 30,
+the accepted Fill run took 207.86 seconds and peaked at 27.02 GB physical
+memory. All 377,129 black-mask source pixels stayed identical in the PNG.
+
 FLUX 1 Fill 4-bit also completed a 256 by 256 masked edit on this Mac.
 That four-step execution check used guidance 30 and peaked at 17.42 GB.
 The edited region changed and unselected pixels stayed identical, but
@@ -263,6 +269,13 @@ Mask requests use Grounding DINO Tiny to find text-described objects and
 SAM 2.1 Tiny to segment them. The default CPU path uses the small models;
 `--device cpu` makes that execution choice explicit. Generation uses
 Metal through MLX; segmentation runs on the CPU.
+
+For object removal, `--padding 12` includes pixels around the detected
+selection so a tight mask does not restore the original object's outline
+when the result is composited. Padding accepts 0 to 128 pixels along each
+axis and defaults to 0. It keeps the image size fixed and clips naturally
+at the image edges. Inspect the expanded mask to ensure it covers the
+object and any shadow you want removed.
 
 ```bash
 uv run --extra models pic2panning mask photo.jpg \

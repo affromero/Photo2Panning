@@ -574,6 +574,8 @@ def test_separate_mask_flag_requests_individual_cpu_masks() -> None:
             "person. bicycle.",
             "--threshold",
             "0.4",
+            "--padding",
+            "12",
             "--device",
             "cpu",
             "--separate",
@@ -584,8 +586,33 @@ def test_separate_mask_flag_requests_individual_cpu_masks() -> None:
     assert request.source == "coast.png"
     assert request.prompt == "person. bicycle."
     assert request.threshold == 0.4
+    assert request.padding == 12
     assert request.device == "cpu"
     assert not request.merge
+
+
+@pytest.mark.parametrize("padding", ["-1", "129", "0.5"])
+def test_invalid_mask_padding_fails_before_reading_inputs(
+    tmp_path: Path, padding: str
+) -> None:
+    """Invalid mask expansion never accesses models or missing source files."""
+    error = failed_job(
+        run_cli(
+            [
+                "mask",
+                str(tmp_path / "missing.png"),
+                "--output",
+                str(tmp_path / "mask.png"),
+                "--prompt",
+                "person",
+                "--padding",
+                padding,
+            ]
+        )
+    )
+    assert error.error in {"ValidationError", "ValueError"}
+    assert "padding" in error.message.lower()
+    assert not list(tmp_path.iterdir())
 
 
 def test_video_generation_options_preserve_both_guides_and_model_settings() -> (

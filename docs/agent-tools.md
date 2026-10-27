@@ -110,6 +110,13 @@ controls. An edit prompt should describe the complete target scene. Use
 Generation uses quantized MLX models on Metal. Mask requests use the small
 CPU models; the only supported `device` value is `cpu`.
 
+Mask requests accept integer `padding` from 0 to 128 pixels, defaulting to
+0. It expands each detected selection along both image axes before the
+mask is merged or saved, without changing image dimensions. Use padding
+when removal needs to cover object edges or a nearby shadow. Inspect the
+saved mask before generating: padding does not identify shadows for you.
+The CLI option is `--padding`.
+
 For image generation, omit `steps` to choose 16 for FLUX 3, 4 for Schnell,
 or 28 for Dev and Fill. Default guidance is 3.5 for Dev and 30 for Fill. FLUX 3
 and Schnell reject guidance controls. Explicit steps override the default.
@@ -147,6 +154,13 @@ the result using the mask. Black mask pixels retain the original pixels
 exactly in the output PNG. FLUX 1 Fill receives the mask during generation.
 Choose it when masked inpainting is needed. All masked requests require
 matching source, mask, and output dimensions.
+
+For the bundled person-removal example, run
+[mask-person.json](../examples/mask-person.json), then
+[remove-person.json](../examples/remove-person.json). The first selects
+the person and includes 12 pixels of padding. The second uses FLUX 1 Fill
+to reconstruct the empty beach inside that prepared mask. Black pixels in
+the saved mask retain the source exactly in the output PNG.
 
 ### Reconstruct a scene, then move the camera
 

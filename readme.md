@@ -12,18 +12,22 @@ speed, and add music or title cards. Photo2Panning also provides image
 editing and local model tools through a CLI, Python library, and validated
 JSON jobs.
 
-| Photo pan | Zoom and return | 3D camera excursion |
-| :---: | :---: | :---: |
-| [<img src="examples/media/waterfall-pan.gif" alt="Complete portrait pan across the waterfall and coastal cliffs" width="180"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-pan.mp4) | [<img src="examples/media/mountain-zoom.gif" alt="Complete zoom into the snowy mountains and return to the original view" width="180"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/mountain-zoom.mp4) | [<img src="examples/media/waterfall-camera.gif" alt="A 3D camera moves right and forward, then returns, with foreground and background moving differently" width="180"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-camera-excursion.mp4) |
-
-The pan and zoom previews show their complete motion. The camera preview
-isolates the 3D excursion. Click an animation for its 1080 by 1920, 60 fps
-MP4. The examples below show the source, result, and command together.
-
 [Quick start](#quick-start) · [Demos](#demos) ·
-[FLUX edits](#change-the-season-with-flux) · [Features](#features) ·
+[FLUX edits](#change-the-season-with-flux) ·
+[Object removal](#remove-a-person-with-sam-and-flux-fill) · [Features](#features) ·
 [Python](#python-library) · [LLM tools](#llm-tools-and-json-jobs) ·
 [Local models](#local-models)
+
+| Photo pan | Zoom and return |
+| :---: | :---: |
+| [<img src="examples/media/waterfall-pan.gif" alt="Complete portrait pan across the waterfall and coastal cliffs" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-pan.mp4) | [<img src="examples/media/mountain-zoom.gif" alt="Complete zoom into the snowy mountains and return to the original view" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/mountain-zoom.mp4) |
+| **3D camera excursion** | **First to last frame** |
+| [<img src="examples/media/waterfall-camera.gif" alt="A 3D camera moves right and forward, then returns, with foreground and background moving differently" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-camera-excursion.mp4) | <img src="examples/media/waterfall-first-last.gif" alt="Local LTX video generation guided by the first and last waterfall views" width="252"/> |
+
+The pan and zoom previews show their complete motion; the camera preview
+isolates its 3D excursion. Those examples link to 1080 by 1920, 60 fps
+MP4s. The generated transition uses first and last image guides at
+512 by 896 and 24 fps. The examples below show the inputs and results.
 
 ## Quick start
 
@@ -74,8 +78,10 @@ uv run pic2panning render examples/media/mountains.jpg \
   --shutter-angle 180 --crf 16 --preset slow
 ```
 
-The bundled photos are resized copies of the original public demos and
-follow the [Pexels license](https://www.pexels.com/license/).
+The waterfall and mountain photos are resized copies of the original
+public demos. Source photos follow the
+[Pexels license](https://www.pexels.com/license/), with credits beside
+their examples.
 
 ### Pan, pause, move a 3D camera, and resume
 
@@ -166,6 +172,28 @@ conditioned on the masked area itself, select `flux1-fill`. See
 [Sunset PNG](examples/media/waterfall-sunset.png)
 
 </details>
+
+### Remove a person with SAM and FLUX Fill
+
+[<img src="examples/media/remove-person-comparison.jpg" alt="Original beach photo, the person selected by SAM with padding, and the finished FLUX Fill result with the person removed" width="800"/>](examples/media/remove-person-result.png)
+
+SAM selects the person. The mask includes 12 pixels of padding around
+the selection to cover its outline. FLUX 1 Fill reconstructs the sand,
+sea, and sky inside that region. Pixels outside the saved mask remain
+identical in the final PNG.
+
+```bash
+uv run --extra models pic2panning run examples/mask-person.json
+uv run --extra models pic2panning run examples/remove-person.json
+```
+
+The [selection job](examples/mask-person.json) runs on the CPU. The
+[removal job](examples/remove-person.json) uses 4-bit Fill, 28 steps,
+and guidance 30 at 768 by 512. Mask padding defaults to zero; the CLI
+option `--padding 12` expands it for this example. Inspect the selection
+to include edges and any shadows that need removal.
+
+Photo: [RECALL FROM THE FUTURE, Pexels](https://www.pexels.com/photo/man-standing-alone-on-beach-13953040/).
 
 ## Features
 
@@ -370,23 +398,25 @@ model terms. See [local model setup and measured runs](docs/models.md).
 
 ### Generate a shot between two photos
 
+| First image guide | Generated transition | Last image guide |
+| :---: | :---: | :---: |
+| <img src="examples/media/waterfall-transition-first.png" alt="First waterfall crop used to guide local video generation" width="180"/> | <img src="examples/media/waterfall-first-last.gif" alt="Generated motion between the two nearby waterfall views" width="180"/> | <img src="examples/media/waterfall-transition-last.png" alt="Last waterfall crop used to guide local video generation" width="180"/> |
+
 The `video` extra adds local LTX-2.3 generation on MLX. Its two stages use
 the first and last photos as image guides. Generated endpoints can differ
 from the input pixels. For a continuous camera move, choose adjacent views
-of the same scene. The bundled public photos illustrate the request format.
+of the same scene. This example uses two nearby crops of the public
+waterfall photo.
 
 ```bash
 uv sync --frozen --extra video
-uv run --extra video pic2panning generate-video \
-  --first-frame examples/media/waterfall.jpg \
-  --last-frame examples/media/mountains.jpg \
-  --output generated.mp4 \
-  --prompt "A continuous camera move across the landscape toward the final view." \
-  --size 576 1024 --frames 65 --steps 20
+uv run --extra video pic2panning run examples/generate-video.json
 ```
 
-The output is a silent MP4 at 24 fps by default. Inputs are center-cropped
-to fit; use `edit` first to choose another framing. Width and height must
+The [job](examples/generate-video.json) includes the prompt, seed, and
+both guide paths. Its output is a silent 512 by 896 MP4 with 49 frames
+at 24 fps. Inputs are center-cropped to fit; use `edit` first to choose
+another framing. Width and height must
 be multiples of 64, and frame counts must be `8k + 1` with at least 9
 frames. The first default run downloads about 40 GB of model weights.
 Local input images stay on this Mac. See

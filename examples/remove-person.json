@@ -1,0 +1,13 @@
+{
+  "kind": "generate",
+  "source": "examples/media/remove-person-source.png",
+  "mask": "person-mask.png",
+  "output": "person-removed.png",
+  "prompt": "Black-and-white photograph of an empty windswept sandy beach. Continue the gently rippled gray sand and distant ocean through the center with the same overcast light, faint horizon, perspective, and soft film grain. An uninterrupted empty shoreline.",
+  "model": "flux1-fill",
+  "quantization": 4,
+  "seed": 7,
+  "steps": 28,
+  "guidance": 30,
+  "size": {"width": 768, "height": 512}
+}
