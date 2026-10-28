@@ -13,9 +13,16 @@ the runtime schemas.
 | `scene` | Reconstruct a photo into a reusable calibrated Gaussian scene | `reconstruct_scene` |
 | `camera` | Pan, pause for a 3D camera excursion, return, and resume | `render_camera` |
 | `edit` | Crop, resize, rotate, flip, brightness, contrast, saturation | `edit` |
-| `generate` | Prompted generation, reference-image editing, masked fill | `generate` |
+| `generate` | Prompted generation, ordered references, masked fill | `generate` |
 | `generate-video` | One local shot guided by first and last image inputs | `generate_video` |
 | `mask` | Find objects from text and produce segmentation masks | `mask` |
+| `depth` | Save metric depth, previews, normals, mask, and source binding | `extract_depth` |
+| `compose` | Animate a camera and media/text layers with mixed audio | `compose` |
+| `preview` | Save one canonical composition frame as PNG | `preview` |
+| `beats` | Detect audio onset markers on the CPU | `detect_beats` |
+| `repair` | Enlarge a contextual region and preserve unselected pixels | `repair` |
+| `social-pack` | Export aspect variants with covers and carousel stills | `social_pack` |
+| `project` | Execute a dependency graph with verified caching | `run_project` |
 
 Inspect the current contract before constructing a job:
 
@@ -26,6 +33,11 @@ uv run pic2panning schema
 Each request rejects unknown fields. Numeric values must be finite. Use
 enum values exactly as the schema lists them. Models and media encoders
 load during execution, so schema discovery works with the core install.
+
+The [Studio](studio.md) edits these same operations in a local browser.
+[Saved projects](projects.md) store dependencies and cache provenance.
+Standalone paths resolve from the process working directory; project node
+paths resolve from `ProjectRequest.workspace`.
 
 ## Construct a job
 
@@ -146,7 +158,7 @@ uv run --extra models pic2panning run examples/generate-masked.json
 Both jobs reference `examples/media/waterfall-reference.png`, a bundled
 768 by 512 copy of the public source. The first saves the binary mask as
 `waterfall-sky-mask.png`; the second uses that path. The cyan selection
-overlay in the README is a visualization, rather than the model input.
+overlay in the README visualizes the binary mask used by these jobs.
 
 An unmasked FLUX 3 reference edit can change the whole image. In the
 masked FLUX 3 path, the model edits the reference and the library composites
@@ -161,7 +173,111 @@ FLUX 3 to remove foreground pedestrians and traffic from a busy street
 and add signs of abandonment. This reference edit has no mask. Changes
 across the entire image are allowed; there is no exact preservation
 guarantee for the buildings. Two small vehicles remain in the distance.
-Inspect small objects before claiming complete removal.
+The [context repair](../examples/repair-vehicles.json) removes those two
+remaining vehicles while keeping every black-mask pixel identical. Its
+`region` uses source-pixel crop coordinates. `context` adds nearby pixels
+for inference, `max_edge` controls the enlarged model crop, and `feather`
+softens the selection inward. The optional mask has full-source dimensions.
+Repair always returns a full-resolution PNG. See the
+[actual comparison](../examples/media/repair/vehicles-detail.jpg).
+
+For several FLUX 3 guides, use an ordered `references` array. An optional
+`source` is first in that order; both forms count toward ten total images.
+The [two-reference example](../examples/generate-references.json) omits
+`source` and uses the two bundled Cloud Gate photos. Model weights,
+quantization, seed, and output size remain explicit. Other FLUX families
+reject additional references.
+
+### Compose layers and camera keyframes
+
+A `ComposeRequest` declares a world `canvas`, output `size`, `duration`,
+camera keyframes, and an ordered `layers` array. Layers render back to
+front. Width precedes height in every size. At zoom one, canvas height maps
+to output height with uniform scaling.
+
+Camera `x` and `y` locate the viewport center in world pixels; `zoom` must
+be positive. Camera `at` values use absolute composition seconds. Repeated
+poses at different times create holds. `ease` selects the outgoing segment:
+`linear`, `ease-in`, `ease-out`, `ease-in-out`, or `hold`.
+
+Image, video, and text layers share `id`, `start`, `duration`, `size`, and
+keyframes. Layer `x` and `y` are rectangle centers. Keyframe `at` uses
+seconds relative to the layer start. `scale` is positive, `rotation` uses
+degrees, and `opacity` ranges from zero to one. Times must begin at zero,
+increase strictly, and stay within the layer or composition. The final
+pose holds after its last keyframe.
+
+`space: "world"` follows the camera. `space: "viewport"` uses pixels at
+the composition's authored output size. Social reframing scales viewport
+centers with the respective output axes and graphics uniformly with output
+width. Image and video `fit` selects `contain` or `cover`, preserving aspect.
+Text layers provide wrapping, fonts, color, stroke, and shadow controls.
+
+Video layers declare `source_start` and constant `speed`, or a monotone
+`source_times` map for speed ramps. Equal source times create frozen holds.
+Sampling stays within the actual source duration. Video-layer sound is
+selected separately through an audio track.
+
+`shutter_angle` accepts zero to 360 and defaults to zero. An enabled shutter
+integrates `shutter_samples` samples in linear light over the exposure;
+the default sample count is eight, with one to sixteen accepted. The first
+and last frames retain their exact endpoints. This is independent of the
+encoding frame rate and increases render cost.
+
+See [compose.json](../examples/compose.json) for a complete multi-photo
+camera path with a hold, viewport text, and sound. Output frames round up
+to `ceil(duration * fps)`. A `PreviewRequest` embeds the composition and
+selects either an exact `frame` index or an `at` time. It saves PNG through
+the same frame function used by exports.
+
+### Masks, selective motion, and depth
+
+An image layer's white `mask` pixels remain visible as the layer moves.
+Provide a clean background plate beneath a moving subject. For video,
+`cinemagraph.mask` selects moving pixels over either an explicit
+`reference` image or a `reference_time` frozen from the source video.
+Choose exactly one reference form. Masks and plates must match the oriented
+source dimensions. `feather` controls the motion-mask edge.
+
+Attach `DepthStyle.metadata` to an image layer for cached focus, fog,
+lighting, and bounded parallax. `DepthOcclusion.layer_id` identifies the
+image supplying nearer foreground geometry for another layer. These
+operations run on the CPU once the bound asset exists. The
+[depth guide](depth.md) documents metric fields, artifact hashes, source
+identity, source-pixel effect units, and estimated-depth limits.
+
+### Audio mixing and beat markers
+
+Compositions accept multiple `MixTrack` entries with roles `music`,
+`voice`, or `ambience`. Each track declares its timeline `start`, source
+offset, duration, gain, fades, and loop policy. Tracks must fit the movie;
+their fades must fit the selected interval. Add `ducking` to music or
+ambience to compress it under the voice mix. At least one voice track is
+required, and voice tracks cannot duck themselves.
+
+`BeatRequest` analyzes an explicit source interval and saves
+`BeatAnalysis` with `markers`, measured `duration`, and optional `bpm`.
+Markers are seconds relative to that selected interval. Add a track's
+timeline start when placing them into composition `beats`. Beat markers
+are ordered, unique, and bounded by the movie duration. Studio can snap
+keyframes to nearby markers.
+
+### Social variants and cached projects
+
+`SocialPackRequest` embeds one composition and declares an output
+directory. Default variants are portrait 1080×1920, feed 1080×1350, and
+square 1080×1080. Each named variant can have a cover and selected carousel
+frames. All outputs render from the original world canvas. Requested safe
+guides are separate preview files. See
+[social-pack.json](../examples/social-pack.json).
+
+`ProjectRequest` wraps a `ProjectDocument` with workspace, report path,
+targets, cache policy, and overwrite control. Nodes use the same standalone
+operation schema. Consuming another node's file requires a `depends_on`
+edge. Preflight checks all selected producers, aliases, and transitive
+inputs before processing. Results expose source hashes and cache hits.
+See the [project guide](projects.md) and
+[runnable graph](../examples/project.json).
 
 ### Reconstruct a scene, then move the camera
 
@@ -302,8 +418,11 @@ when overwrite is enabled.
 
 CLI success writes a JSON result to stdout. Scene reconstruction returns
 `SceneResult` with singular `output` and `metadata` paths plus `points` and
-source identity. Other jobs return `JobResult`: read `outputs` for the
-actual files produced, including separate segmentation masks. `width`,
+source identity. Depth extraction returns `DepthResult` with its TIFF,
+manifest, preview, normals, mask, source dimensions, and grid dimensions.
+Projects return `ProjectResult` with per-node cache and provenance reports.
+Other operations return `JobResult`: read `outputs` for the actual files,
+including separate segmentation masks. `width`,
 `height`, `frames`, and `duration` describe produced media when applicable.
 Use the exit status to distinguish failures; do not infer success from the
 existence of a previously created file.
@@ -324,7 +443,7 @@ Call public APIs directly; avoid spawning the CLI from an application.
 
 ## Audio and timing
 
-A global `audio` track replaces sound across the complete output timeline.
+For `RenderRequest`, a global `audio` track replaces the complete timeline's sound.
 It includes title cards. A clip's own `audio` replaces sound for that clip.
 Use one replacement policy per job. A video retains its original sound by
 default; `keep_audio: false` silences that clip.

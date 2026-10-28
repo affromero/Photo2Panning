@@ -1,6 +1,6 @@
 """Typed boundaries for image generation and object segmentation."""
 
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from PIL import Image
 
@@ -23,6 +23,20 @@ class ImageBackend(Protocol):
         mask: Image.Image | None,
     ) -> Image.Image:
         """Return one RGB image at the requested dimensions."""
+        ...
+
+
+@runtime_checkable
+class ReferenceImageBackend(ImageBackend, Protocol):
+    """Generate from multiple normalized, ordered conditioning images."""
+
+    def generate_references(
+        self,
+        request: GenerateRequest,
+        references: tuple[Image.Image, ...],
+        mask: Image.Image | None,
+    ) -> Image.Image:
+        """Return RGB pixels using every reference in its declared order."""
         ...
 
 

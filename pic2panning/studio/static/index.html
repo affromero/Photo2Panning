@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Photo2Panning Studio</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/style.css" />
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="wordmark" href="/" aria-label="Photo2Panning Studio"
+        ><span class="mark" aria-hidden="true">↗</span
+        ><span
+          >PHOTO<span class="brand-divider">/</span>PANNING<small
+            >LOCAL STUDIO</small
+          ></span
+        ></a
+      >
+      <div class="project-heading">
+        <input
+          id="project-name"
+          aria-label="Project name"
+          value="Untitled"
+        /><span id="save-state">Unsaved</span>
+      </div>
+      <div class="top-actions">
+        <button id="new-project">New</button
+        ><button id="open-project">Open</button
+        ><button id="save-project">Save</button><span class="separator"></span
+        ><button id="undo" title="Undo (⌘Z)" aria-label="Undo">↶</button
+        ><button id="redo" title="Redo (⇧⌘Z)" aria-label="Redo">↷</button
+        ><button id="export" class="primary">Export ↗</button>
+      </div>
+    </header>
+    <main class="workbench">
+      <aside class="library-panel">
+        <nav class="tabs library-tabs" aria-label="Project panels">
+          <button class="active" data-library="media">Media</button
+          ><button data-library="layers">Layers</button
+          ><button data-library="sound">Sound</button
+          ><button data-library="graph">Graph</button>
+        </nav>
+        <div id="library" class="panel-scroll"></div>
+        <div class="import-bar">
+          <button id="import-media" class="wide">+ Import files</button
+          ><input
+            id="file-input"
+            type="file"
+            multiple
+            hidden
+            accept="image/png,image/jpeg,image/webp,image/tiff,video/*,audio/*,.ttf,.otf,.json,.ply"
+          /><span id="workspace-label" title="Workspace"></span>
+        </div>
+      </aside>
+      <section class="viewer" aria-label="Composition preview">
+        <div class="viewer-heading">
+          <div>
+            <span class="eyebrow">COMPOSITION</span
+            ><span id="view-label">1080 × 1920 · 30 FPS</span>
+          </div>
+          <div>
+            <button
+              id="focus-layer"
+              data-action="frame-layer"
+              title="Center a camera keyframe on the selected layer"
+            >
+              Frame selection</button
+            ><button id="camera-mode">Camera controls</button>
+          </div>
+        </div>
+        <div id="stage" class="stage">
+          <div class="stage-corner top-left"></div>
+          <div class="stage-corner bottom-right"></div>
+          <div id="preview-frame" class="preview-frame">
+            <img id="preview" alt="Canonical composition frame" />
+            <div id="safe-guides" class="safe-guides" hidden></div>
+          </div>
+          <span id="preview-state" class="preview-state">Loading preview</span>
+        </div>
+        <div class="viewer-footer">
+          <div class="aspect-switch" aria-label="Export aspect">
+            <button data-aspect="1080,1920" class="active">9:16</button
+            ><button data-aspect="1080,1350">4:5</button
+            ><button data-aspect="1080,1080">1:1</button
+            ><button data-aspect="1920,1080">16:9</button>
+          </div>
+          <label class="check"
+            ><input id="guides" type="checkbox" /> Safe guides</label
+          ><span class="canonical-label">FRAME PREVIEW</span>
+        </div>
+      </section>
+      <aside class="inspector-panel">
+        <nav class="tabs inspector-tabs" aria-label="Inspector">
+          <button data-inspector="transform" class="active">Edit</button
+          ><button data-inspector="depth">Depth</button
+          ><button data-inspector="ai">AI</button
+          ><button data-inspector="json">JSON</button>
+        </nav>
+        <div id="inspector" class="panel-scroll"></div>
+      </aside>
+      <section class="timeline" aria-label="Timeline">
+        <div class="transport">
+          <button
+            id="play"
+            aria-label="Play preview"
+            title="Play / pause (Space)"
+          >
+            ▶</button
+          ><span id="timecode">00:00.00</span
+          ><input
+            id="time-range"
+            type="range"
+            min="0"
+            max="149"
+            value="0"
+            step="1"
+            aria-label="Timeline frame"
+          /><button id="add-keyframe">◇ Keyframe</button
+          ><button id="add-text">+ Text</button
+          ><label class="check"
+            ><input id="snap-beats" type="checkbox" checked /> Snap
+            beats</label
+          >
+        </div>
+        <div id="timeline-ruler" class="timeline-ruler"></div>
+        <div id="timeline-layers" class="timeline-layers"></div>
+      </section>
+    </main>
+    <footer class="statusbar">
+      <span class="status-light" aria-hidden="true"></span
+      ><span id="message" role="status">Local workspace. Ready.</span
+      ><button id="show-jobs">Jobs <span id="job-count">0</span></button>
+    </footer>
+    <dialog id="open-dialog">
+      <div class="dialog-heading">
+        <h2>Open project</h2>
+        <button data-close="open-dialog" aria-label="Close">×</button>
+      </div>
+      <label>Saved projects<select id="project-list"></select></label
+      ><label
+        >Workspace path<input
+          id="project-path"
+          value="projects/untitled.json" /></label
+      ><button id="confirm-open" class="primary">Open project</button>
+    </dialog>
+    <dialog id="export-dialog">
+      <div class="dialog-heading">
+        <h2>Export</h2>
+        <button data-close="export-dialog" aria-label="Close">×</button>
+      </div>
+      <label
+        >Movie filename<input
+          id="export-path"
+          value="exports/untitled.mp4" /></label
+      ><label class="check"
+        ><input id="overwrite" type="checkbox" /> Replace existing
+        exports</label
+      >
+      <div class="export-actions">
+        <button id="render-full" class="primary">Render movie</button
+        ><button id="render-draft">Render 720p draft</button
+        ><button id="render-social">Export social pack</button
+        ><button id="run-project">Run graph with cache</button>
+      </div>
+      <p>
+        Social packs include portrait, feed, and square movies, a cover, and
+        selected carousel frames.
+      </p>
+      <label
+        >Carousel seconds, separated by commas<input
+          id="carousel-times"
+          value="0, 2, 4" /></label
+      ><label class="check"
+        ><input id="pack-guides" type="checkbox" /> Include separate guide
+        previews</label
+      >
+    </dialog>
+    <dialog id="jobs-dialog" class="jobs-dialog">
+      <div class="dialog-heading">
+        <h2>Jobs &amp; exports</h2>
+        <button data-close="jobs-dialog" aria-label="Close">×</button>
+      </div>
+      <div id="jobs"></div>
+    </dialog>
+    <dialog id="mask-dialog" class="mask-dialog">
+      <div class="dialog-heading">
+        <h2>Paint selection</h2>
+        <div class="mask-tools">
+          <label
+            >Brush
+            <input
+              id="brush-size"
+              type="range"
+              min="1"
+              max="160"
+              value="24" /></label
+          ><button id="brush-erase" aria-pressed="false">Erase</button
+          ><button id="mask-clear">Clear</button
+          ><button id="mask-save" class="primary">Save mask</button
+          ><button data-close="mask-dialog" aria-label="Close">×</button>
+        </div>
+      </div>
+      <p>
+        White selects pixels. Drag to paint. Image masks move with their layer;
+        place a clean background beneath them.
+      </p>
+      <div id="mask-area" class="mask-area">
+        <img id="mask-reference" alt="Source image for selection" /><canvas
+          id="mask-canvas"
+          aria-label="Selection brush canvas"
+        ></canvas>
+      </div>
+    </dialog>
+  </body>
+</html>

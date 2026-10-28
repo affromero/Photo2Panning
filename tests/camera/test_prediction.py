@@ -15,7 +15,8 @@ from pydantic import TypeAdapter
 from pic2panning.backends.contracts import SceneBackend
 from pic2panning.backends.loading import load_dependency
 from pic2panning.schemas.camera import SceneColorSpace
-from pic2panning.schemas.scene import MOGE_MODEL, MOGE_REVISION, SceneRequest
+from pic2panning.schemas.creative.depth import MOGE_MODEL, MOGE_REVISION
+from pic2panning.schemas.scene import SceneRequest
 
 pytestmark = pytest.mark.models
 
@@ -254,12 +255,13 @@ def prediction(
     pytest.importorskip("beartype")
     pytest.importorskip("huggingface_hub")
     module = load_dependency("pic2panning.backends.moge")
+    inference = load_dependency("pic2panning.backends.creative.moge")
     checkpoint = tmp_path / "model.pt"
     checkpoint.write_bytes(b"Synthetic authenticated checkpoint")
     harness = PredictionHarness(module, torch, checkpoint)
-    monkeypatch.setattr(module, "hf_hub_download", harness.download)
+    monkeypatch.setattr(inference, "hf_hub_download", harness.download)
     monkeypatch.setattr(
-        module,
+        inference,
         "MOGE_SHA256",
         hashlib.sha256(checkpoint.read_bytes()).hexdigest(),
     )

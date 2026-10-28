@@ -1,0 +1,15 @@
+{
+  "kind": "repair",
+  "source": "examples/media/street-result.png",
+  "output": "street-repaired.png",
+  "region": {"op": "crop", "left": 280, "top": 432, "right": 472, "bottom": 474},
+  "prompt": "Remove the small white car in the center of the distant roadway and the gray delivery van parked beside the left curb. Reconstruct unobstructed empty asphalt and the left sidewalk where these vehicles stand. The street is entirely deserted. Preserve the existing stone buildings, shopfronts, traffic signals, curb, perspective, lane markings, and overcast lighting. Every road lane and sidewalk is empty with no vehicles, no people, and no new objects.",
+  "context": 64,
+  "max_edge": 768,
+  "mask": "examples/media/repair/vehicle-mask.png",
+  "feather": 3,
+  "seed": 7,
+  "steps": 16,
+  "quantization": 4,
+  "overwrite": false
+}

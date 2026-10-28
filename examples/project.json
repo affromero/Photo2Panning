@@ -1,0 +1,519 @@
+{
+  "kind": "project",
+  "project": {
+    "name": "Coast to northern lights",
+    "nodes": [
+      {
+        "id": "prepare",
+        "job": {
+          "kind": "edit",
+          "source": "examples/media/waterfall.jpg",
+          "output": "outputs/social-demo/prepared-waterfall.png",
+          "operations": [
+            {
+              "op": "adjust",
+              "brightness": 1.04,
+              "contrast": 1.0,
+              "saturation": 1.0
+            }
+          ],
+          "overwrite": false
+        },
+        "depends_on": [],
+        "enabled": true
+      },
+      {
+        "id": "film",
+        "job": {
+          "kind": "compose",
+          "canvas": {
+            "width": 3840,
+            "height": 1280
+          },
+          "duration": 8.0,
+          "camera": [
+            {
+              "at": 0.0,
+              "x": 652.8000000000001,
+              "y": 640.0,
+              "zoom": 1.0,
+              "ease": "ease-in-out"
+            },
+            {
+              "at": 2.0,
+              "x": 1248.0,
+              "y": 640.0,
+              "zoom": 1.12,
+              "ease": "linear"
+            },
+            {
+              "at": 3.0,
+              "x": 1248.0,
+              "y": 640.0,
+              "zoom": 1.12,
+              "ease": "ease-in-out"
+            },
+            {
+              "at": 6.0,
+              "x": 2880.0,
+              "y": 640.0,
+              "zoom": 1.0,
+              "ease": "linear"
+            },
+            {
+              "at": 8.0,
+              "x": 2880.0,
+              "y": 640.0,
+              "zoom": 1.0,
+              "ease": "linear"
+            }
+          ],
+          "layers": [
+            {
+              "id": "coast",
+              "start": 0.0,
+              "duration": 8.0,
+              "size": {
+                "width": 1920,
+                "height": 1280
+              },
+              "keyframes": [
+                {
+                  "at": 0.0,
+                  "x": 960.0,
+                  "y": 640.0,
+                  "scale": 1.0,
+                  "rotation": 0.0,
+                  "opacity": 1.0,
+                  "ease": "linear"
+                }
+              ],
+              "space": "world",
+              "mask": null,
+              "depth": null,
+              "occlusion": null,
+              "kind": "image",
+              "source": "outputs/social-demo/prepared-waterfall.png",
+              "fit": "contain"
+            },
+            {
+              "id": "aurora",
+              "start": 0.0,
+              "duration": 8.0,
+              "size": {
+                "width": 1920,
+                "height": 1280
+              },
+              "keyframes": [
+                {
+                  "at": 0.0,
+                  "x": 2880.0,
+                  "y": 640.0,
+                  "scale": 1.0,
+                  "rotation": 0.0,
+                  "opacity": 1.0,
+                  "ease": "linear"
+                }
+              ],
+              "space": "world",
+              "mask": null,
+              "depth": null,
+              "occlusion": null,
+              "kind": "image",
+              "source": "examples/media/mountains.jpg",
+              "fit": "contain"
+            },
+            {
+              "id": "title",
+              "start": 0.0,
+              "duration": 8.0,
+              "size": {
+                "width": 960,
+                "height": 240
+              },
+              "keyframes": [
+                {
+                  "at": 0.0,
+                  "x": 540.0,
+                  "y": 326.40000000000003,
+                  "scale": 1.0,
+                  "rotation": 0.0,
+                  "opacity": 0.0,
+                  "ease": "linear"
+                },
+                {
+                  "at": 0.5,
+                  "x": 540.0,
+                  "y": 326.40000000000003,
+                  "scale": 1.0,
+                  "rotation": 0.0,
+                  "opacity": 1.0,
+                  "ease": "linear"
+                },
+                {
+                  "at": 6.5,
+                  "x": 540.0,
+                  "y": 326.40000000000003,
+                  "scale": 1.0,
+                  "rotation": 0.0,
+                  "opacity": 1.0,
+                  "ease": "linear"
+                },
+                {
+                  "at": 7.5,
+                  "x": 540.0,
+                  "y": 326.40000000000003,
+                  "scale": 1.0,
+                  "rotation": 0.0,
+                  "opacity": 0.0,
+                  "ease": "linear"
+                }
+              ],
+              "space": "viewport",
+              "mask": null,
+              "depth": null,
+              "occlusion": null,
+              "kind": "text",
+              "text": "FROM THE COAST\nTO THE NORTHERN LIGHTS",
+              "font": null,
+              "font_size": 60,
+              "color": "white",
+              "align": "center",
+              "stroke_width": 2,
+              "stroke_color": "black",
+              "shadow_color": "#00000080",
+              "shadow_offset": [
+                2,
+                3
+              ],
+              "spacing": 4
+            }
+          ],
+          "audio": [
+            {
+              "source": "examples/media/demo-music.wav",
+              "role": "music",
+              "start": 0.0,
+              "source_start": 0.0,
+              "duration": 8.0,
+              "loop": false,
+              "gain_db": -2.0,
+              "fade_in": 0.0,
+              "fade_out": 0.5,
+              "ducking": null
+            }
+          ],
+          "beats": [
+            0.0,
+            0.5,
+            1.0,
+            1.5,
+            2.0,
+            2.5,
+            3.0,
+            3.5,
+            4.0,
+            4.5,
+            5.0,
+            5.5,
+            6.0,
+            6.5,
+            7.0,
+            7.5
+          ],
+          "background": "black",
+          "output": "outputs/social-demo/story.mp4",
+          "size": {
+            "width": 1080,
+            "height": 1920
+          },
+          "fps": 30,
+          "shutter_angle": 180.0,
+          "shutter_samples": 8,
+          "encoding": {
+            "crf": 16,
+            "preset": "slow"
+          },
+          "overwrite": false
+        },
+        "depends_on": [
+          "prepare"
+        ],
+        "enabled": true
+      },
+      {
+        "id": "social",
+        "job": {
+          "kind": "social-pack",
+          "composition": {
+            "kind": "compose",
+            "canvas": {
+              "width": 3840,
+              "height": 1280
+            },
+            "duration": 8.0,
+            "camera": [
+              {
+                "at": 0.0,
+                "x": 652.8000000000001,
+                "y": 640.0,
+                "zoom": 1.0,
+                "ease": "ease-in-out"
+              },
+              {
+                "at": 2.0,
+                "x": 1248.0,
+                "y": 640.0,
+                "zoom": 1.12,
+                "ease": "linear"
+              },
+              {
+                "at": 3.0,
+                "x": 1248.0,
+                "y": 640.0,
+                "zoom": 1.12,
+                "ease": "ease-in-out"
+              },
+              {
+                "at": 6.0,
+                "x": 2880.0,
+                "y": 640.0,
+                "zoom": 1.0,
+                "ease": "linear"
+              },
+              {
+                "at": 8.0,
+                "x": 2880.0,
+                "y": 640.0,
+                "zoom": 1.0,
+                "ease": "linear"
+              }
+            ],
+            "layers": [
+              {
+                "id": "coast",
+                "start": 0.0,
+                "duration": 8.0,
+                "size": {
+                  "width": 1920,
+                  "height": 1280
+                },
+                "keyframes": [
+                  {
+                    "at": 0.0,
+                    "x": 960.0,
+                    "y": 640.0,
+                    "scale": 1.0,
+                    "rotation": 0.0,
+                    "opacity": 1.0,
+                    "ease": "linear"
+                  }
+                ],
+                "space": "world",
+                "mask": null,
+                "depth": null,
+                "occlusion": null,
+                "kind": "image",
+                "source": "outputs/social-demo/prepared-waterfall.png",
+                "fit": "contain"
+              },
+              {
+                "id": "aurora",
+                "start": 0.0,
+                "duration": 8.0,
+                "size": {
+                  "width": 1920,
+                  "height": 1280
+                },
+                "keyframes": [
+                  {
+                    "at": 0.0,
+                    "x": 2880.0,
+                    "y": 640.0,
+                    "scale": 1.0,
+                    "rotation": 0.0,
+                    "opacity": 1.0,
+                    "ease": "linear"
+                  }
+                ],
+                "space": "world",
+                "mask": null,
+                "depth": null,
+                "occlusion": null,
+                "kind": "image",
+                "source": "examples/media/mountains.jpg",
+                "fit": "contain"
+              },
+              {
+                "id": "title",
+                "start": 0.0,
+                "duration": 8.0,
+                "size": {
+                  "width": 960,
+                  "height": 240
+                },
+                "keyframes": [
+                  {
+                    "at": 0.0,
+                    "x": 540.0,
+                    "y": 326.40000000000003,
+                    "scale": 1.0,
+                    "rotation": 0.0,
+                    "opacity": 0.0,
+                    "ease": "linear"
+                  },
+                  {
+                    "at": 0.5,
+                    "x": 540.0,
+                    "y": 326.40000000000003,
+                    "scale": 1.0,
+                    "rotation": 0.0,
+                    "opacity": 1.0,
+                    "ease": "linear"
+                  },
+                  {
+                    "at": 6.5,
+                    "x": 540.0,
+                    "y": 326.40000000000003,
+                    "scale": 1.0,
+                    "rotation": 0.0,
+                    "opacity": 1.0,
+                    "ease": "linear"
+                  },
+                  {
+                    "at": 7.5,
+                    "x": 540.0,
+                    "y": 326.40000000000003,
+                    "scale": 1.0,
+                    "rotation": 0.0,
+                    "opacity": 0.0,
+                    "ease": "linear"
+                  }
+                ],
+                "space": "viewport",
+                "mask": null,
+                "depth": null,
+                "occlusion": null,
+                "kind": "text",
+                "text": "FROM THE COAST\nTO THE NORTHERN LIGHTS",
+                "font": null,
+                "font_size": 60,
+                "color": "white",
+                "align": "center",
+                "stroke_width": 2,
+                "stroke_color": "black",
+                "shadow_color": "#00000080",
+                "shadow_offset": [
+                  2,
+                  3
+                ],
+                "spacing": 4
+              }
+            ],
+            "audio": [
+              {
+                "source": "examples/media/demo-music.wav",
+                "role": "music",
+                "start": 0.0,
+                "source_start": 0.0,
+                "duration": 8.0,
+                "loop": false,
+                "gain_db": -2.0,
+                "fade_in": 0.0,
+                "fade_out": 0.5,
+                "ducking": null
+              }
+            ],
+            "beats": [
+              0.0,
+              0.5,
+              1.0,
+              1.5,
+              2.0,
+              2.5,
+              3.0,
+              3.5,
+              4.0,
+              4.5,
+              5.0,
+              5.5,
+              6.0,
+              6.5,
+              7.0,
+              7.5
+            ],
+            "background": "black",
+            "output": "outputs/social-demo/story.mp4",
+            "size": {
+              "width": 1080,
+              "height": 1920
+            },
+            "fps": 30,
+            "shutter_angle": 180.0,
+            "shutter_samples": 8,
+            "encoding": {
+              "crf": 16,
+              "preset": "slow"
+            },
+            "overwrite": false
+          },
+          "output_directory": "outputs/social-demo/social",
+          "variants": [
+            {
+              "name": "portrait",
+              "size": {
+                "width": 1080,
+                "height": 1920
+              }
+            },
+            {
+              "name": "feed",
+              "size": {
+                "width": 1080,
+                "height": 1350
+              }
+            },
+            {
+              "name": "square",
+              "size": {
+                "width": 1080,
+                "height": 1080
+              }
+            }
+          ],
+          "cover_at": 2.0,
+          "carousel_at": [
+            0.0,
+            1.0,
+            2.0,
+            3.0,
+            4.0,
+            5.0,
+            6.0,
+            7.0
+          ],
+          "safe_insets": {
+            "top": 0.1,
+            "right": 0.08,
+            "bottom": 0.15,
+            "left": 0.08
+          },
+          "preview_guides": false,
+          "overwrite": false
+        },
+        "depends_on": [
+          "prepare"
+        ],
+        "enabled": true
+      }
+    ],
+    "revision": 0
+  },
+  "workspace": ".",
+  "output": "outputs/social-demo/project-report.json",
+  "targets": [
+    "social"
+  ],
+  "cache": "reuse",
+  "overwrite": true
+}

@@ -23,16 +23,15 @@ from pic2panning.schemas.camera import (
     SceneCalibration,
     Vector3,
 )
-from pic2panning.schemas.jobs import JobResult
-from pic2panning.schemas.media import ImageClip, Motion
-from pic2panning.schemas.scene import (
+from pic2panning.schemas.creative.depth import (
     MOGE_MODEL,
     MOGE_REVISION,
     MOGE_SHA256,
     MOGE_SOURCE_REVISION,
-    SceneRequest,
-    SceneResult,
 )
+from pic2panning.schemas.jobs import JobResult
+from pic2panning.schemas.media import ImageClip, Motion
+from pic2panning.schemas.scene import SceneRequest, SceneResult
 from pic2panning.tools.frames import (
     crop_dimensions,
     exposure_frame,

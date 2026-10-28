@@ -5,7 +5,11 @@ from contextlib import ExitStack
 from klogr.path import get_suffix, path_dirname, path_join, path_stem
 from PIL import Image, ImageChops, ImageFilter
 
-from pic2panning.backends.contracts import ImageBackend, MaskBackend
+from pic2panning.backends.contracts import (
+    ImageBackend,
+    MaskBackend,
+    ReferenceImageBackend,
+)
 from pic2panning.backends.mflux import MfluxBackend
 from pic2panning.backends.segmentation import GroundedSamBackend
 from pic2panning.errors import MediaError
@@ -23,11 +27,21 @@ def generate(
     request: GenerateRequest, backend: ImageBackend | None = None
 ) -> JobResult:
     """Generate or edit an image with a selected local quantized model."""
-    sources = tuple(
-        source
-        for source in (request.source, request.mask)
-        if source is not None
-    ) + tuple(lora.path for lora in request.loras)
+    sources = (
+        tuple(
+            source
+            for source in (request.source, request.mask)
+            if source is not None
+        )
+        + request.references
+        + tuple(lora.path for lora in request.loras)
+    )
+    selected = backend if backend is not None else MfluxBackend()
+    reference_backend = (
+        selected if isinstance(selected, ReferenceImageBackend) else None
+    )
+    if request.references and reference_backend is None:
+        raise ValueError("The selected backend does not support references")
     with (
         ExitStack() as images,
         atomic_output(
@@ -71,16 +85,25 @@ def generate(
                 "so unmasked pixels remain unchanged."
             )
             raise MediaError(message)
-        selected = backend if backend is not None else MfluxBackend()
         reference = (
             images.enter_context(image.convert("RGB"))
             if image is not None and image.mode != "RGB"
             else image
         )
+        references = tuple(
+            images.enter_context(read_image(source))
+            for source in request.references
+        )
+        if reference_backend is not None and request.references:
+            generated_image = reference_backend.generate_references(
+                request,
+                ((reference,) if reference is not None else ()) + references,
+                mask_image,
+            )
+        else:
+            generated_image = selected.generate(request, reference, mask_image)
         generated = images.enter_context(
-            images.enter_context(
-                selected.generate(request, reference, mask_image)
-            ).convert("RGB")
+            images.enter_context(generated_image).convert("RGB")
         )
         if generated.size != request.size.as_tuple:
             message = "The model returned an image with unexpected dimensions."

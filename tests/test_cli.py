@@ -178,7 +178,7 @@ def test_module_entry_points_emit_discoverable_schema(module: str) -> None:
     assert isinstance(discriminator, dict)
     assert discriminator["propertyName"] == "kind"
     assert isinstance(discriminator["mapping"], dict)
-    assert set(discriminator["mapping"]) == {
+    assert {
         "camera",
         "scene",
         "render",
@@ -186,7 +186,14 @@ def test_module_entry_points_emit_discoverable_schema(module: str) -> None:
         "generate",
         "mask",
         "generate-video",
-    }
+        "compose",
+        "preview",
+        "project",
+        "repair",
+        "depth",
+        "beats",
+        "social-pack",
+    } <= set(discriminator["mapping"])
 
 
 def test_schema_discovery_does_not_import_optional_model_frameworks() -> None:

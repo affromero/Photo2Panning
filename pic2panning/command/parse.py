@@ -9,6 +9,16 @@ from typing import Annotated
 import tyro
 
 from pic2panning.command.camera import CameraCommand, SceneCommand
+from pic2panning.command.creative import (
+    BeatCommand,
+    ComposeCommand,
+    DepthCommand,
+    PreviewCommand,
+    ProjectCommand,
+    RepairCommand,
+    SocialPackCommand,
+    StudioCommand,
+)
 from pic2panning.command.media import EditCommand, RenderCommand
 from pic2panning.command.models import (
     GenerateCommand,
@@ -54,6 +64,14 @@ type Command = (
     | Annotated[ValidateCommand, tyro.conf.subcommand(name="validate")]
     | Annotated[SchemaCommand, tyro.conf.subcommand(name="schema")]
     | Annotated[InspectCommand, tyro.conf.subcommand(name="inspect")]
+    | Annotated[DepthCommand, tyro.conf.subcommand(name="depth")]
+    | Annotated[BeatCommand, tyro.conf.subcommand(name="beats")]
+    | Annotated[ComposeCommand, tyro.conf.subcommand(name="compose")]
+    | Annotated[PreviewCommand, tyro.conf.subcommand(name="preview")]
+    | Annotated[ProjectCommand, tyro.conf.subcommand(name="project")]
+    | Annotated[RepairCommand, tyro.conf.subcommand(name="repair")]
+    | Annotated[SocialPackCommand, tyro.conf.subcommand(name="social-pack")]
+    | Annotated[StudioCommand, tyro.conf.subcommand(name="studio")]
 )
 
 

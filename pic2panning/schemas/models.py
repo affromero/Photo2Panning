@@ -55,7 +55,12 @@ class GenerateRequest(PydanticBaseModel):
     """Select local MLX generation or prompted editing in a JSON job."""
 
     source: NonEmptyString | None = None
-    """Reference image path or HTTP URL; null requests text-to-image."""
+    """Primary image path or HTTP URL, first in the conditioning order."""
+
+    references: Annotated[
+        tuple[NonEmptyString, ...], Field(max_length=10)
+    ] = ()
+    """Additional ordered FLUX 3 images; at most ten including source."""
 
     output: NonEmptyString
     """PNG, JPEG, or WebP destination; masked edits require lossless PNG."""
@@ -107,6 +112,10 @@ class GenerateRequest(PydanticBaseModel):
         """Reject unsupported options before loading model weights."""
         if self.size.width % 16 or self.size.height % 16:
             raise ValueError("Model width and height must be multiples of 16")
+        if self.references and self.model != GenerationModel.FLUX3:
+            raise ValueError("Additional references require FLUX 3")
+        if len(self.references) + int(self.source is not None) > 10:
+            raise ValueError("FLUX 3 accepts at most ten conditioning images")
         if self.mask and not self.source:
             raise ValueError("A mask requires a source image")
         if self.mask and get_suffix(self.output).lower() != ".png":

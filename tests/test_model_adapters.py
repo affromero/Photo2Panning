@@ -10,7 +10,10 @@ import pytest
 from PIL import Image
 from pydantic import TypeAdapter
 
-from pic2panning.backends.mflux import MfluxBackend
+from pic2panning.backends.mflux import (
+    MfluxBackend,
+    canonical_default_checkpoint,
+)
 from pic2panning.backends.segmentation import GroundedSamBackend
 from pic2panning.schemas.base import PydanticBaseModel, Size
 from pic2panning.schemas.models import (
@@ -29,6 +32,7 @@ class FluxProvider:
     initialization: dict[str, object]
     generation: dict[str, object]
     reference_pixels: bytes | None
+    references_pixels: tuple[bytes, ...]
     mask_pixels: bytes | None
     image: Image.Image
 
@@ -38,6 +42,7 @@ class FluxProvider:
         self.initialization = {}
         self.generation = {}
         self.reference_pixels = None
+        self.references_pixels = ()
         self.mask_pixels = None
         self.image = Image.new("RGBA", (1, 1))
 
@@ -45,6 +50,12 @@ class FluxProvider:
         """Read temporary conditioning files while inference can access them."""
         self.generation = parameters
         references = parameters.get("image_paths")
+        if references is not None:
+            pixels = []
+            for path in TypeAdapter(list[str]).validate_python(references):
+                with Image.open(path) as image:
+                    pixels.append(image.tobytes())
+            self.references_pixels = tuple(pixels)
         reference = (
             TypeAdapter(list[str]).validate_python(references)[0]
             if references is not None
@@ -277,6 +288,51 @@ def test_generation_preserves_model_selection_and_conditioning_defaults(
     if case.model == GenerationModel.FLUX3 and case.reference:
         assert "image_paths" in parameters
         assert "image_path" not in parameters
+
+
+def test_flux3_uses_edit_variant_and_every_ordered_reference_without_source(
+    flux_provider: FluxProvider,
+) -> None:
+    """References-only editing passes all images to the MFLUX edit class."""
+    request = GenerateRequest(
+        references=("first.png", "second.png"),
+        output="result.png",
+        prompt="Combine both references",
+        size=Size(width=32, height=16),
+    )
+    with (
+        Image.new("RGB", (19, 13), "red") as first,
+        Image.new("RGB", (23, 17), "blue") as second,
+        MfluxBackend().generate_references(
+            request, (first, second), None
+        ) as result,
+    ):
+        assert result.size == (32, 16)
+        assert flux_provider.references_pixels == (
+            first.tobytes(),
+            second.tobytes(),
+        )
+    assert flux_provider.variant == "Flux3KleinEdit"
+    assert "image_path" not in flux_provider.generation
+
+
+def test_checkpoint_identity_matches_model_selection_and_explicit_weights(
+    flux_provider: FluxProvider,
+) -> None:
+    """Cache identity resolves the exact checkpoint used for inference."""
+    request = GenerateRequest(
+        output="result.png",
+        prompt="An image",
+        quantization=Quantization.Q8,
+        size=Size(width=16, height=16),
+    )
+    assert canonical_default_checkpoint(request).endswith("-q8")
+    with MfluxBackend().generate(request, None, None):
+        assert flux_provider.initialization["model_path"] == (
+            canonical_default_checkpoint(request)
+        )
+    explicit = request.model_copy(update={"weights": "local/custom"})
+    assert canonical_default_checkpoint(explicit) == "local/custom"
 
 
 @pytest.mark.parametrize(
