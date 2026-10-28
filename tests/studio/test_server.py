@@ -102,6 +102,18 @@ def test_cross_origin_reads_cannot_discover_token(tmp_path: Path) -> None:
         assert client.token.encode() not in response.body
 
 
+def test_editor_serves_its_typography_module_without_exposing_other_files(
+    tmp_path: Path,
+) -> None:
+    """The editor's text controls load through its explicit static allowlist."""
+    with running_studio(tmp_path) as client:
+        response = client.request("GET", "/typography.js")
+        assert response.status == 200
+        assert "javascript" in response.headers["content-type"]
+        assert b"createTypography" in response.body
+        assert client.request("GET", "/server.py").status == 404
+
+
 def test_project_saves_increment_revision_and_reject_stale_edits(
     tmp_path: Path,
 ) -> None:

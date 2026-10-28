@@ -62,13 +62,16 @@ def reframe_composition(request: ComposeRequest, size: Size) -> ComposeRequest:
 
 
 def composition_inputs(request: ComposeRequest) -> tuple[str, ...]:
-    """Enumerate sources, masks, fonts, and every referenced depth artifact."""
+    """Enumerate source media, depth artifacts, fonts, and native executables."""
     sources: list[str] = [track.source for track in request.audio]
     for layer in request.layers:
         if isinstance(layer, ImageLayer | VideoLayer):
             sources.append(layer.source)
-        elif layer.font:
-            sources.append(layer.font)
+        else:
+            if layer.font:
+                sources.append(layer.font)
+            if layer.solid and layer.solid.executable:
+                sources.append(layer.solid.executable)
         if layer.mask:
             sources.append(layer.mask)
         if isinstance(layer, VideoLayer) and layer.cinemagraph:

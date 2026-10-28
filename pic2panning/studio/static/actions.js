@@ -116,6 +116,12 @@ export function createActions(app, editor) {
   }
 
   async function runNode(node, context = {}) {
+    const session = state.session;
+    const identifier = node.id;
+    if (!(await app.flushEdits()) || session !== state.session) return;
+    node = state.doc.nodes.find((item) => item.id === identifier);
+    if (!node)
+      throw new Error('The selected operation is no longer available.');
     const request = {
       kind: 'project',
       project: clone(state.doc),
@@ -135,6 +141,8 @@ export function createActions(app, editor) {
   }
 
   async function runOperation(job, action, context = {}) {
+    const session = state.session;
+    if (!(await app.flushEdits()) || session !== state.session) return;
     const layer = selectedLayer();
     const node = {
       id: unique(job.kind.replace(/[^a-z]/g, '')),
@@ -162,6 +170,8 @@ export function createActions(app, editor) {
   }
 
   async function runAI(action) {
+    const session = state.session;
+    if (!(await app.flushEdits()) || session !== state.session) return;
     const config = state.ai;
     const prompt = config.prompt.trim();
     const settings = {
@@ -512,6 +522,8 @@ export function createActions(app, editor) {
   }
 
   async function exportJob(mode) {
+    const session = state.session;
+    if (!(await app.flushEdits()) || session !== state.session) return;
     const current = clone(composition());
     current.output = $('#export-path').value.trim();
     current.overwrite = $('#overwrite').checked;
@@ -595,7 +607,9 @@ export function createActions(app, editor) {
   }
 
   function bind() {
-    $('#export').addEventListener('click', () => {
+    $('#export').addEventListener('click', async () => {
+      const session = state.session;
+      if (!(await app.flushEdits()) || session !== state.session) return;
       $('#export-path').value = composition().output;
       $('#overwrite').checked = composition().overwrite || false;
       $('#carousel-times').value = [

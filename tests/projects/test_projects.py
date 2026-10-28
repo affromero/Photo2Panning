@@ -19,6 +19,7 @@ from pic2panning.schemas.creative.composition import (
     ImageLayer,
     LayerKeyframe,
     PreviewRequest,
+    TextLayer,
 )
 from pic2panning.schemas.creative.depth import (
     DepthArtifact,
@@ -32,6 +33,7 @@ from pic2panning.schemas.creative.project import (
     ProjectRequest,
     ProjectResult,
 )
+from pic2panning.schemas.creative.surface import SolidText, SurfaceAttachment
 from pic2panning.schemas.editing import Crop, EditRequest, Flip
 from pic2panning.schemas.jobs import JobResult
 from pic2panning.schemas.models import GenerateRequest
@@ -47,7 +49,7 @@ from pic2panning.tools.projects.cache import (
     save_entry,
     workspace_lock,
 )
-from pic2panning.tools.projects.registry import resolve
+from pic2panning.tools.projects.registry import file_inputs, resolve
 from pic2panning.tools.projects.runtime import preflight, publish
 
 
@@ -415,6 +417,50 @@ def composition(photo: Path, metadata: Path | None = None) -> ComposeRequest:
         size=Size(width=8, height=4),
         fps=2,
     )
+
+
+def test_custom_native_executable_resolves_under_workspace_and_changes_cache(
+    tmp_path: Path, photo: Path
+) -> None:
+    """An explicit Blender binary contributes its actual bytes to project identity."""
+    metadata = depth_metadata(tmp_path / "depth", photo)
+    executable = tmp_path / "bin" / "blender"
+    executable.parent.mkdir()
+    executable.write_bytes(b"native executable version one")
+    base = composition(Path(photo.name), metadata.relative_to(tmp_path))
+    text = TextLayer(
+        id="solid",
+        text="X",
+        font_size=2,
+        size=Size(width=8, height=4),
+        duration=1,
+        keyframes=(LayerKeyframe(x=4, y=2),),
+        surface=SurfaceAttachment(layer_id="photo", region=(0, 0, 8, 4)),
+        solid=SolidText(executable="bin/blender"),
+    )
+    node = ProjectNode(
+        id="compose",
+        job=base.model_copy(update={"layers": (*base.layers, text)}),
+    )
+    request = project_request(tmp_path, (node,))
+    operations, protected = preflight(
+        request, str(tmp_path), request.project.nodes
+    )
+    resolved = operations[node.id]
+    assert resolved.kind == "compose"
+    caption = resolved.layers[-1]
+    assert isinstance(caption, TextLayer)
+    assert caption.solid is not None
+    assert caption.solid.executable == str(executable)
+    assert str(executable) in file_inputs(resolved)
+    assert str(executable) in protected
+    before = input_hashes(resolved)
+    assert before[str(executable)] == file_sha256(str(executable))
+    identity = fingerprint(resolved, before, "same-processing-engine")
+    executable.write_bytes(b"native executable version two")
+    after = input_hashes(resolved)
+    assert after[str(executable)] != before[str(executable)]
+    assert fingerprint(resolved, after, "same-processing-engine") != identity
 
 
 def test_transitive_depth_artifacts_require_their_producer_dependency(

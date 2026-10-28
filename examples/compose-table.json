@@ -1,0 +1,221 @@
+{
+  "kind": "compose",
+  "canvas": {
+    "width": 1080,
+    "height": 1920
+  },
+  "duration": 7.0,
+  "camera": [
+    {
+      "at": 0.0,
+      "x": 540.0,
+      "y": 960.0,
+      "zoom": 1.0,
+      "ease": "linear"
+    }
+  ],
+  "layers": [
+    {
+      "id": "table",
+      "start": 0.0,
+      "duration": 7.0,
+      "size": {
+        "width": 1068,
+        "height": 1600
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 540.0,
+          "y": 820.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "world",
+      "mask": null,
+      "depth": {
+        "metadata": "examples/media/table-depth/table.depth.json",
+        "focus_metres": 3.0,
+        "focus_end_metres": null,
+        "blur_radius": 0.0,
+        "fog_density": 0.0,
+        "fog_color": "white",
+        "light_direction": [
+          0.0,
+          0.0,
+          -1.0
+        ],
+        "ambient": 1.0,
+        "relight_strength": 0.0,
+        "parallax_x": 0.0,
+        "parallax_y": 0.0,
+        "exposed_pixels": "edge-repeat"
+      },
+      "occlusion": null,
+      "perspective": 1200.0,
+      "kind": "image",
+      "source": "examples/media/table.jpg",
+      "fit": "contain"
+    },
+    {
+      "id": "falling-letters",
+      "start": 0.0,
+      "duration": 7.0,
+      "size": {
+        "width": 1200,
+        "height": 300
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 640.0,
+          "y": 1740.0,
+          "scale": 0.9,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "world",
+      "mask": null,
+      "depth": null,
+      "occlusion": null,
+      "perspective": 1200.0,
+      "kind": "text",
+      "text": "MAKE ROOM",
+      "font": "examples/media/fonts/Anton-Regular.ttf",
+      "font_size": 240,
+      "color": "#eee1c3",
+      "align": "center",
+      "stroke_width": 0,
+      "stroke_color": "black",
+      "shadow_color": "#00000080",
+      "shadow_offset": [
+        0,
+        0
+      ],
+      "spacing": 10,
+      "text_cues": [
+        {
+          "at": 4.0,
+          "text": "MAKE TIME",
+          "transition": 1.1,
+          "stagger": 0.3,
+          "blur": 0.0,
+          "travel": 0.12
+        }
+      ],
+      "surface": {
+        "layer_id": "table",
+        "region": [
+          220.0,
+          1660.0,
+          1120.0,
+          1890.0
+        ],
+        "tilt": 0.0,
+        "yaw": 0.0,
+        "roll": -6.0,
+        "offset_metres": [
+          0.0,
+          0.0
+        ],
+        "lift_metres": 0.0,
+        "depth_tolerance_metres": 0.005,
+        "feather_metres": 0.003,
+        "max_relative_error": 0.02
+      },
+      "letter_drop": {
+        "duration": 2.0,
+        "stagger": 0.6,
+        "height": 12.0,
+        "rotation": [
+          65.0,
+          -25.0,
+          -28.0
+        ],
+        "bounce": 0.12
+      },
+      "solid": {
+        "thickness": 0.2,
+        "bevel": 0.02,
+        "roughness": 0.36,
+        "metallic": 0.0,
+        "samples": 64,
+        "ambient": 0.25,
+        "key": {
+          "position": [
+            0.22,
+            -0.18,
+            0.3
+          ],
+          "energy": 12.0,
+          "size": 0.4,
+          "color": "#ffcf99"
+        },
+        "fill": {
+          "position": [
+            -0.35,
+            0.12,
+            0.45
+          ],
+          "energy": 6.0,
+          "size": 0.5,
+          "color": "#f2e0c2"
+        },
+        "executable": null
+      }
+    }
+  ],
+  "audio": [
+    {
+      "source": "examples/media/demo-music.wav",
+      "role": "music",
+      "start": 0.0,
+      "source_start": 0.0,
+      "duration": 7.0,
+      "loop": false,
+      "gain_db": 0.0,
+      "fade_in": 0.0,
+      "fade_out": 0.6,
+      "ducking": null
+    }
+  ],
+  "beats": [
+    0.0,
+    0.5,
+    1.0,
+    1.5,
+    2.0,
+    2.5,
+    3.0,
+    3.5,
+    4.0,
+    4.5,
+    5.0,
+    5.5,
+    6.0,
+    6.5
+  ],
+  "background": "#ede5d6",
+  "output": "outputs/table-demo/table-letters.mp4",
+  "size": {
+    "width": 1080,
+    "height": 1920
+  },
+  "fps": 30,
+  "shutter_angle": 0.0,
+  "shutter_samples": 8,
+  "encoding": {
+    "crf": 16,
+    "preset": "slow"
+  },
+  "overwrite": false
+}

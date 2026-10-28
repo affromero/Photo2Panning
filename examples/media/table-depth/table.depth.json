@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "source_sha256": "8c4a9ab4cb1c0bfb9e26d5b8ac02451907e56c85980c2c066629abfc51f99f6c",
+  "width": 1280,
+  "height": 1917,
+  "grid_width": 513,
+  "grid_height": 768,
+  "intrinsics": [
+    [
+      909.3921508789062,
+      0.0,
+      256.5
+    ],
+    [
+      0.0,
+      909.39208984375,
+      384.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "depth": {
+    "path": "table.tiff",
+    "sha256": "21210c49924feee62d2aa9ae81517aa70a4ce577bb65ac3f724b5c1b1cbed6b8"
+  },
+  "preview": {
+    "path": "table.preview.png",
+    "sha256": "9fa97e4e8504668ae5ee70774fb138c279f9222e1089229fc36a167adde91a99"
+  },
+  "normals": {
+    "path": "table.normals.png",
+    "sha256": "720f4352531f667632a30a15a00a398ba461a9f106610f643214dc9b47068442"
+  },
+  "mask": {
+    "path": "table.mask.png",
+    "sha256": "219019dfa2bfeeb524e93dec222153973a140bd39c6bfa69060aad66deb6113e"
+  },
+  "preview_near_metres": 0.5686355072259903,
+  "preview_far_metres": 1.7004210507869715,
+  "model": "Ruicheng/moge-2-vitl-normal",
+  "model_revision": "cb0e8bbd6b1e243589717c78e750b1ba4c093acf",
+  "source_revision": "925b8ed835a7a9cdb7578ba15c658a0afc969030",
+  "checkpoint_sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
+  "device": "mps",
+  "num_tokens": 1800,
+  "max_edge": 768,
+  "units": "metres",
+  "depth_axis": "camera-z",
+  "orientation": "EXIF-transposed RGB",
+  "coordinates": "OpenCV x-right y-down z-forward",
+  "pixel_centres": "image edges plus 0.5",
+  "mask_semantics": "white semantic foreground; sky depth retained",
+  "preview_encoding": "uint16 linear z, near=65535 far=0",
+  "normal_encoding": "depth-derived camera-facing unit XYZ mapped [-1,1] to RGB [0,255]",
+  "license": "MIT"
+}

@@ -6,18 +6,17 @@ from collections.abc import Iterator
 from contextlib import ExitStack
 from itertools import pairwise
 from types import TracebackType
-from typing import Self
+from typing import TYPE_CHECKING, Protocol, Self, cast
 
 from PIL import (
     Image,
     ImageChops,
     ImageColor,
-    ImageDraw,
     ImageFilter,
-    ImageFont,
     ImageOps,
 )
 
+from pic2panning.backends.loading import load_dependency
 from pic2panning.errors import MediaError
 from pic2panning.schemas.base import Size
 from pic2panning.schemas.creative.composition import (
@@ -30,6 +29,7 @@ from pic2panning.schemas.creative.composition import (
     TextLayer,
     VideoLayer,
 )
+from pic2panning.schemas.creative.surface import SurfacePlane
 from pic2panning.tools.creative.depth import DepthAsset, load_depth
 from pic2panning.tools.creative.effects import (
     apply_depth_parallax,
@@ -39,9 +39,46 @@ from pic2panning.tools.creative.effects import (
 )
 from pic2panning.tools.creative.sampling import VideoSampler, source_time
 from pic2panning.tools.frames import frame_count, weighted_linear_blend
-from pic2panning.tools.io import materialize, read_image, require_file
+from pic2panning.tools.io import materialize, read_image
 from pic2panning.tools.media import probe
-from pic2panning.tools.text import wrap_text
+from pic2panning.tools.typography.drop import (
+    LetterDropRenderer,
+    SurfaceContext,
+)
+from pic2panning.tools.typography.morph import TextAnimator
+from pic2panning.tools.typography.projection import render_surface
+from pic2panning.tools.typography.rotation import (
+    TextOrientation,
+    TextPlacement,
+    project_text,
+)
+from pic2panning.tools.typography.surface import fit_surface
+from pic2panning.tools.typography.text import TextLayout, text_image
+
+if TYPE_CHECKING:
+    from pic2panning.tools.typography.solid import SolidRenderer
+
+
+class SolidFactory(Protocol):
+    """Construct the optional native renderer only for a solid text layer."""
+
+    def __call__(
+        self,
+        layer: TextLayer,
+        context: SurfaceContext,
+        animator: TextAnimator,
+        directory: str,
+        *,
+        render_size: Size | None = None,
+    ) -> SolidRenderer:
+        """Borrow calibrated assets while owning the native worker lifetime."""
+        ...
+
+
+class SolidModule(Protocol):
+    """The native solid renderer's lazy public factory."""
+
+    SolidRenderer: SolidFactory
 
 
 def eased(progress: float, easing: Easing) -> float:
@@ -87,65 +124,14 @@ def transform_at(layer: Layer, seconds: float) -> LayerKeyframe:
                 scale=left.scale + (right.scale - left.scale) * fraction,
                 rotation=left.rotation
                 + (right.rotation - left.rotation) * fraction,
+                rotation_x=left.rotation_x
+                + (right.rotation_x - left.rotation_x) * fraction,
+                rotation_y=left.rotation_y
+                + (right.rotation_y - left.rotation_y) * fraction,
                 opacity=left.opacity
                 + (right.opacity - left.opacity) * fraction,
             )
     return layer.keyframes[-1]
-
-
-def text_image(layer: TextLayer) -> Image.Image:
-    """Draw wrapped text onto a transparent rectangle without a title card."""
-    image = Image.new("RGBA", layer.size.as_tuple)
-    draw = ImageDraw.Draw(image)
-    font = (
-        ImageFont.truetype(require_file(layer.font), size=layer.font_size)
-        if layer.font
-        else ImageFont.load_default(size=layer.font_size)
-    )
-    text = wrap_text(
-        layer.text,
-        draw,
-        font,
-        max(1, layer.size.width - 2 * layer.stroke_width),
-    )
-    bounds = draw.multiline_textbbox(
-        (0, 0),
-        text,
-        font=font,
-        align=layer.align.value,
-        spacing=layer.spacing,
-        stroke_width=layer.stroke_width,
-    )
-    width = bounds[2] - bounds[0]
-    x = 0.0
-    if layer.align.value == "center":
-        x = (layer.size.width - width) / 2
-    elif layer.align.value == "right":
-        x = layer.size.width - width
-    position = (x - bounds[0], -bounds[1])
-    if layer.shadow_offset != (0, 0):
-        draw.multiline_text(
-            (
-                position[0] + layer.shadow_offset[0],
-                position[1] + layer.shadow_offset[1],
-            ),
-            text,
-            font=font,
-            fill=ImageColor.getcolor(layer.shadow_color, "RGBA"),
-            align=layer.align.value,
-            spacing=layer.spacing,
-        )
-    draw.multiline_text(
-        position,
-        text,
-        font=font,
-        fill=ImageColor.getcolor(layer.color, "RGBA"),
-        align=layer.align.value,
-        spacing=layer.spacing,
-        stroke_width=layer.stroke_width,
-        stroke_fill=ImageColor.getcolor(layer.stroke_color, "RGBA"),
-    )
-    return image
 
 
 def fit_layer(
@@ -174,14 +160,14 @@ def fit_layer(
             return fitted
 
 
-def place_layer(
+def layer_mapping(
     image: Image.Image,
     layer: Layer,
     transform: LayerKeyframe,
     request: ComposeRequest,
     camera: CameraKeyframe,
-) -> Image.Image:
-    """Apply the same affine mapping to visual pixels and occlusion masks."""
+) -> tuple[float, float, float, float, float, float]:
+    """Map output coordinates to source texels for canonical layer placement."""
     factor = request.size.height / request.canvas.height * camera.zoom
     center_x = (transform.x - camera.x) * factor + request.size.width / 2
     center_y = (transform.y - camera.y) * factor + request.size.height / 2
@@ -194,19 +180,54 @@ def place_layer(
     b = math.sin(radians) / divisor * image.width / layer.size.width
     d = -math.sin(radians) / divisor * image.height / layer.size.height
     e = math.cos(radians) / divisor * image.height / layer.size.height
+    return (
+        a,
+        b,
+        image.width / 2 - a * center_x - b * center_y,
+        d,
+        e,
+        image.height / 2 - d * center_x - e * center_y,
+    )
+
+
+def place_layer(
+    image: Image.Image,
+    layer: Layer,
+    transform: LayerKeyframe,
+    request: ComposeRequest,
+    camera: CameraKeyframe,
+) -> Image.Image:
+    """Apply the same mapping to visual pixels and occlusion masks."""
+    mapping = layer_mapping(image, layer, transform, request, camera)
+    if transform.rotation_x or transform.rotation_y:
+        return project_text(
+            image,
+            TextOrientation(
+                rotation_x=transform.rotation_x,
+                rotation_y=transform.rotation_y,
+                perspective=layer.perspective,
+            ),
+            TextPlacement(
+                output=request.size, authored=layer.size, inverse=mapping
+            ),
+        )
     return image.transform(
         request.size.as_tuple,
         Image.Transform.AFFINE,
-        (
-            a,
-            b,
-            image.width / 2 - a * center_x - b * center_y,
-            d,
-            e,
-            image.height / 2 - d * center_x - e * center_y,
-        ),
+        mapping,
         resample=Image.Resampling.BICUBIC,
     )
+
+
+def fade_layer(image: Image.Image, opacity: float) -> None:
+    """Apply one declared opacity multiplier to an owned placed texture."""
+    if opacity == 1:
+        return
+    with (
+        image.getchannel("A") as alpha,
+        alpha.point([round(value * opacity) for value in range(256)]) as faded,
+    ):
+        image.putalpha(faded)
 
 
 def projected_box(
@@ -240,6 +261,10 @@ class CompositionSession:
     videos: dict[str, VideoSampler]
     plates: dict[str, Image.Image]
     depths: dict[str, DepthAsset]
+    texts: dict[str, TextAnimator]
+    surfaces: dict[str, SurfacePlane]
+    drops: dict[str, LetterDropRenderer]
+    solids: dict[str, SolidRenderer]
 
     def __init__(
         self, request: ComposeRequest, *, preview: bool = False
@@ -254,6 +279,10 @@ class CompositionSession:
         self.videos = {}
         self.plates = {}
         self.depths = {}
+        self.texts = {}
+        self.surfaces = {}
+        self.drops = {}
+        self.solids = {}
 
     def __enter__(self) -> Self:
         """Validate and load sources, closing partial state on any failure."""
@@ -263,6 +292,38 @@ class CompositionSession:
             )
             for layer in self.request.layers:
                 self.load_layer(layer)
+            for layer in self.request.layers:
+                if not isinstance(layer, TextLayer):
+                    continue
+                if layer.solid is not None:
+                    host = self.host(layer)
+                    if layer.surface is None:
+                        raise ValueError("Solid text requires a surface")
+                    module = cast(
+                        "SolidModule",
+                        load_dependency("pic2panning.tools.typography.solid"),
+                    )
+                    self.solids[layer.id] = module.SolidRenderer(
+                        layer,
+                        SurfaceContext(
+                            asset=self.depths[host.id],
+                            attachment=layer.surface,
+                            plane=self.surfaces[layer.id],
+                        ),
+                        self.texts[layer.id],
+                        self.directory,
+                        render_size=self.solid_size(host),
+                    )
+                    self.stack.callback(self.solids[layer.id].close)
+                elif layer.letter_drop:
+                    layout = TextLayout(
+                        layer, layer.text, self.texts[layer.id].padding
+                    )
+                    self.stack.callback(layout.close)
+                    self.drops[layer.id] = LetterDropRenderer(
+                        layer, layout, self.masks.get(layer.id)
+                    )
+                    self.stack.callback(self.drops[layer.id].close)
         except BaseException:
             self.stack.close()
             raise
@@ -286,6 +347,13 @@ class CompositionSession:
         """Load static assets and validate video and aligned-mask dimensions."""
         if isinstance(layer, TextLayer):
             self.images[layer.id] = self.own_image(text_image(layer))
+            if layer.text_cues or layer.letter_drop or layer.solid:
+                self.texts[layer.id] = TextAnimator(layer)
+                self.stack.callback(self.texts[layer.id].close)
+            if layer.surface is not None:
+                self.surfaces[layer.id] = fit_surface(
+                    self.depths[layer.surface.layer_id], layer.surface
+                )
         elif isinstance(layer, ImageLayer):
             self.images[layer.id] = self.own_image(
                 read_image(layer.source, preserve_alpha=True)
@@ -321,6 +389,17 @@ class CompositionSession:
             info = self.videos[layer.id].info
             return info.width, info.height
         return self.images[layer.id].size
+
+    def solid_size(self, host: ImageLayer) -> Size:
+        """Retain the largest source density required by the host's animation."""
+        pose = host.keyframes[0].model_copy(
+            update={"scale": max(frame.scale for frame in host.keyframes)}
+        )
+        camera = self.request.camera[0].model_copy(
+            update={"zoom": max(frame.zoom for frame in self.request.camera)}
+        )
+        width, height = self.working_size(host, pose, camera)
+        return Size(width=width, height=height)
 
     def load_cinemagraph(
         self, layer: VideoLayer, sampler: VideoSampler
@@ -379,6 +458,8 @@ class CompositionSession:
         transform: LayerKeyframe,
     ) -> Image.Image:
         """Return an owned layer source with its explicit selective motion."""
+        if isinstance(layer, TextLayer) and layer.id in self.texts:
+            return self.texts[layer.id].frame(local_time)
         if isinstance(layer, VideoLayer):
             image = self.videos[layer.id].frame(source_time(layer, local_time))
             if layer.cinemagraph is not None:
@@ -433,6 +514,150 @@ class CompositionSession:
                     progress,
                 )
         return mask
+
+    def host(self, layer: TextLayer) -> ImageLayer:
+        """Find the validated image that supplies a text layer's surface."""
+        if layer.surface is None:
+            raise ValueError("Text has no surface attachment")
+        for candidate in self.request.layers:
+            if candidate.id == layer.surface.layer_id:
+                if not isinstance(candidate, ImageLayer):
+                    raise ValueError("Surface host must be an image")
+                return candidate
+        raise ValueError("Surface host is missing")
+
+    def surface_frame(
+        self,
+        layer: TextLayer,
+        seconds: float,
+        pose: LayerKeyframe,
+        camera: CameraKeyframe,
+    ) -> Image.Image:
+        """Transport projected type through its host's exact pixel mapping."""
+        host = self.host(layer)
+        attachment = layer.surface
+        if attachment is None or host.depth is None:
+            raise ValueError("Surface text requires calibrated host depth")
+        local = seconds - layer.start
+        progress = (seconds - host.start) / host.duration
+        host_pose = transform_at(host, seconds - host.start)
+        working = self.working_size(host, host_pose, camera)
+        asset = self.depths[host.id]
+        style = rescale_depth_style(
+            host.depth, self.source_size(host), working
+        )
+        if layer.id in self.solids:
+            projected = self.solids[layer.id].frame(local, pose)
+        elif layer.letter_drop and local < layer.letter_drop.duration:
+            projected = self.drops[layer.id].surface_frame(
+                local,
+                pose,
+                SurfaceContext(
+                    asset=asset,
+                    attachment=attachment,
+                    plane=self.surfaces[layer.id],
+                ),
+            )
+        else:
+            with self.source_image(layer, local, camera, pose) as bitmap:
+                if layer.id in self.masks:
+                    with (
+                        bitmap.getchannel("A") as alpha,
+                        ImageChops.multiply(
+                            alpha, self.masks[layer.id]
+                        ) as masked,
+                    ):
+                        bitmap.putalpha(masked)
+                projected = render_surface(
+                    bitmap, asset, attachment, self.surfaces[layer.id], pose
+                )
+        with (
+            projected,
+            projected.resize(working, Image.Resampling.LANCZOS) as resized,
+            apply_depth_parallax(resized, asset, style, progress) as warped,
+            self.images[host.id].convert("RGBA") as host_pixels,
+            host_pixels.getchannel("A") as source_alpha,
+            source_alpha.resize(working, Image.Resampling.LANCZOS) as alpha,
+            apply_depth_parallax(alpha, asset, style, progress) as host_alpha,
+            warped.getchannel("A") as text_alpha,
+            ImageChops.multiply(text_alpha, host_alpha) as covered,
+        ):
+            if host.id in self.masks:
+                with (
+                    self.layer_mask(host, progress, working) as mask,
+                    ImageChops.multiply(covered, mask) as masked,
+                ):
+                    covered.paste(masked)
+            warped.putalpha(covered)
+            with fit_layer(
+                warped,
+                host,
+                projected_box(host, host_pose, self.request, camera),
+            ) as fitted:
+                placed = place_layer(
+                    fitted, host, host_pose, self.request, camera
+                )
+                try:
+                    fade_layer(placed, host_pose.opacity)
+                    apply_occlusion(
+                        placed,
+                        occlusion_mask(
+                            host, seconds, self.request, self, camera
+                        ),
+                    )
+                except BaseException:
+                    placed.close()
+                    raise
+                return placed
+
+    def placed_image(
+        self,
+        layer: Layer,
+        seconds: float,
+        camera: CameraKeyframe,
+        pose: LayerKeyframe,
+    ) -> Image.Image:
+        """Place a static, morphed, falling, or surface-bound layer once."""
+        local = seconds - layer.start
+        if isinstance(layer, TextLayer):
+            if layer.surface is not None:
+                return self.surface_frame(layer, seconds, pose, camera)
+            if layer.letter_drop and local < layer.letter_drop.duration:
+                drop = self.drops[layer.id]
+                return drop.free_frame(
+                    local,
+                    pose,
+                    TextPlacement(
+                        output=self.request.size,
+                        authored=layer.size,
+                        inverse=layer_mapping(
+                            drop.layout.image,
+                            layer,
+                            pose,
+                            self.request,
+                            camera,
+                        ),
+                    ),
+                )
+        with (
+            self.source_image(layer, local, camera, pose) as raw,
+            raw.convert("RGBA") as source,
+        ):
+            if layer.id in self.masks:
+                with (
+                    source.getchannel("A") as alpha,
+                    self.layer_mask(
+                        layer, local / layer.duration, source.size
+                    ) as mask,
+                    ImageChops.multiply(alpha, mask) as masked,
+                ):
+                    source.putalpha(masked)
+            with fit_layer(
+                source,
+                layer,
+                projected_box(layer, pose, self.request, camera),
+            ) as fitted:
+                return place_layer(fitted, layer, pose, self.request, camera)
 
 
 def occlusion_mask(
@@ -507,6 +732,19 @@ def occlusion_mask(
             )
 
 
+def apply_occlusion(image: Image.Image, mask: Image.Image | None) -> None:
+    """Consume an owned foreground mask and retain only visible coverage."""
+    if mask is None:
+        return
+    with (
+        mask,
+        ImageOps.invert(mask) as visible,
+        image.getchannel("A") as alpha,
+        ImageChops.multiply(alpha, visible) as selected,
+    ):
+        image.putalpha(selected)
+
+
 def composition_at_time(
     request: ComposeRequest, seconds: float, session: CompositionSession
 ) -> Image.Image:
@@ -521,54 +759,18 @@ def composition_at_time(
         for layer in request.layers:
             if not layer.start <= seconds < layer.start + layer.duration:
                 continue
-            local = seconds - layer.start
-            transform = transform_at(layer, local)
-            with (
-                session.source_image(layer, local, camera, transform) as raw,
-                raw.convert("RGBA") as source,
-            ):
-                if layer.id in session.masks:
-                    with (
-                        source.getchannel("A") as alpha,
-                        session.layer_mask(
-                            layer, local / layer.duration, source.size
-                        ) as layer_mask,
-                        ImageChops.multiply(alpha, layer_mask) as masked,
-                    ):
-                        source.putalpha(masked)
-                with (
-                    fit_layer(
-                        source,
-                        layer,
-                        projected_box(layer, transform, request, camera),
-                    ) as fitted,
-                    place_layer(
-                        fitted, layer, transform, request, camera
-                    ) as placed,
-                ):
-                    if transform.opacity < 1:
-                        with (
-                            placed.getchannel("A") as alpha,
-                            alpha.point(
-                                [
-                                    round(value * transform.opacity)
-                                    for value in range(256)
-                                ]
-                            ) as faded,
-                        ):
-                            placed.putalpha(faded)
-                    mask = occlusion_mask(
-                        layer, seconds, request, session, camera
-                    )
-                    if mask is not None:
-                        with (
-                            mask,
-                            ImageOps.invert(mask) as visible,
-                            placed.getchannel("A") as alpha,
-                            ImageChops.multiply(alpha, visible) as masked,
-                        ):
-                            placed.putalpha(masked)
-                    frame.alpha_composite(placed)
+            transform = transform_at(layer, seconds - layer.start)
+            if transform.opacity == 0:
+                continue
+            with session.placed_image(
+                layer, seconds, camera, transform
+            ) as placed:
+                fade_layer(placed, transform.opacity)
+                apply_occlusion(
+                    placed,
+                    occlusion_mask(layer, seconds, request, session, camera),
+                )
+                frame.alpha_composite(placed)
         return frame.convert("RGB")
     finally:
         frame.close()

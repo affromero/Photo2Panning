@@ -84,6 +84,8 @@
                   "y": 640.0,
                   "scale": 1.0,
                   "rotation": 0.0,
+                  "rotation_x": 0.0,
+                  "rotation_y": 0.0,
                   "opacity": 1.0,
                   "ease": "linear"
                 }
@@ -92,6 +94,7 @@
               "mask": null,
               "depth": null,
               "occlusion": null,
+              "perspective": 1200.0,
               "kind": "image",
               "source": "outputs/social-demo/prepared-waterfall.png",
               "fit": "contain"
@@ -111,6 +114,8 @@
                   "y": 640.0,
                   "scale": 1.0,
                   "rotation": 0.0,
+                  "rotation_x": 0.0,
+                  "rotation_y": 0.0,
                   "opacity": 1.0,
                   "ease": "linear"
                 }
@@ -119,6 +124,7 @@
               "mask": null,
               "depth": null,
               "occlusion": null,
+              "perspective": 1200.0,
               "kind": "image",
               "source": "examples/media/mountains.jpg",
               "fit": "contain"
@@ -129,43 +135,51 @@
               "duration": 8.0,
               "size": {
                 "width": 960,
-                "height": 240
+                "height": 440
               },
               "keyframes": [
                 {
                   "at": 0.0,
                   "x": 540.0,
-                  "y": 326.40000000000003,
-                  "scale": 1.0,
-                  "rotation": 0.0,
-                  "opacity": 0.0,
-                  "ease": "linear"
+                  "y": 614.4,
+                  "scale": 0.96,
+                  "rotation": -2.0,
+                  "rotation_x": 8.0,
+                  "rotation_y": -15.0,
+                  "opacity": 1.0,
+                  "ease": "ease-out"
                 },
                 {
                   "at": 0.5,
                   "x": 540.0,
-                  "y": 326.40000000000003,
+                  "y": 595.2,
                   "scale": 1.0,
-                  "rotation": 0.0,
+                  "rotation": -1.5,
+                  "rotation_x": 6.0,
+                  "rotation_y": -10.0,
                   "opacity": 1.0,
-                  "ease": "linear"
+                  "ease": "ease-in-out"
                 },
                 {
-                  "at": 6.5,
+                  "at": 4.5,
                   "x": 540.0,
-                  "y": 326.40000000000003,
+                  "y": 595.2,
                   "scale": 1.0,
-                  "rotation": 0.0,
+                  "rotation": 0.5,
+                  "rotation_x": -4.0,
+                  "rotation_y": 3.0,
                   "opacity": 1.0,
-                  "ease": "linear"
+                  "ease": "ease-in-out"
                 },
                 {
-                  "at": 7.5,
+                  "at": 8.0,
                   "x": 540.0,
-                  "y": 326.40000000000003,
+                  "y": 595.2,
                   "scale": 1.0,
-                  "rotation": 0.0,
-                  "opacity": 0.0,
+                  "rotation": 2.0,
+                  "rotation_x": 8.0,
+                  "rotation_y": 10.0,
+                  "opacity": 1.0,
                   "ease": "linear"
                 }
               ],
@@ -173,20 +187,41 @@
               "mask": null,
               "depth": null,
               "occlusion": null,
+              "perspective": 1200.0,
               "kind": "text",
-              "text": "FROM THE COAST\nTO THE NORTHERN LIGHTS",
-              "font": null,
-              "font_size": 60,
-              "color": "white",
+              "text": "CHASE THE\nCOAST",
+              "font": "examples/media/fonts/Anton-Regular.ttf",
+              "font_size": 160,
+              "color": "#f3f2e5",
               "align": "center",
-              "stroke_width": 2,
+              "stroke_width": 0,
               "stroke_color": "black",
-              "shadow_color": "#00000080",
+              "shadow_color": "#10152066",
               "shadow_offset": [
-                2,
-                3
+                0,
+                4
               ],
-              "spacing": 4
+              "spacing": 8,
+              "text_cues": [
+                {
+                  "at": 3.0,
+                  "text": "CHASE THE\nLIGHT",
+                  "transition": 1.0,
+                  "stagger": 0.25,
+                  "blur": 1.5,
+                  "travel": 0.55
+                },
+                {
+                  "at": 5.5,
+                  "text": "TAKE THE LONG\nWAY HOME",
+                  "transition": 1.0,
+                  "stagger": 0.3,
+                  "blur": 1.5,
+                  "travel": 0.6
+                }
+              ],
+              "surface": null,
+              "letter_drop": null
             }
           ],
           "audio": [
@@ -305,6 +340,8 @@
                     "y": 640.0,
                     "scale": 1.0,
                     "rotation": 0.0,
+                    "rotation_x": 0.0,
+                    "rotation_y": 0.0,
                     "opacity": 1.0,
                     "ease": "linear"
                   }
@@ -313,6 +350,7 @@
                 "mask": null,
                 "depth": null,
                 "occlusion": null,
+                "perspective": 1200.0,
                 "kind": "image",
                 "source": "outputs/social-demo/prepared-waterfall.png",
                 "fit": "contain"
@@ -332,6 +370,8 @@
                     "y": 640.0,
                     "scale": 1.0,
                     "rotation": 0.0,
+                    "rotation_x": 0.0,
+                    "rotation_y": 0.0,
                     "opacity": 1.0,
                     "ease": "linear"
                   }
@@ -340,6 +380,7 @@
                 "mask": null,
                 "depth": null,
                 "occlusion": null,
+                "perspective": 1200.0,
                 "kind": "image",
                 "source": "examples/media/mountains.jpg",
                 "fit": "contain"
@@ -350,43 +391,51 @@
                 "duration": 8.0,
                 "size": {
                   "width": 960,
-                  "height": 240
+                  "height": 440
                 },
                 "keyframes": [
                   {
                     "at": 0.0,
                     "x": 540.0,
-                    "y": 326.40000000000003,
-                    "scale": 1.0,
-                    "rotation": 0.0,
-                    "opacity": 0.0,
-                    "ease": "linear"
+                    "y": 614.4,
+                    "scale": 0.96,
+                    "rotation": -2.0,
+                    "rotation_x": 8.0,
+                    "rotation_y": -15.0,
+                    "opacity": 1.0,
+                    "ease": "ease-out"
                   },
                   {
                     "at": 0.5,
                     "x": 540.0,
-                    "y": 326.40000000000003,
+                    "y": 595.2,
                     "scale": 1.0,
-                    "rotation": 0.0,
+                    "rotation": -1.5,
+                    "rotation_x": 6.0,
+                    "rotation_y": -10.0,
                     "opacity": 1.0,
-                    "ease": "linear"
+                    "ease": "ease-in-out"
                   },
                   {
-                    "at": 6.5,
+                    "at": 4.5,
                     "x": 540.0,
-                    "y": 326.40000000000003,
+                    "y": 595.2,
                     "scale": 1.0,
-                    "rotation": 0.0,
+                    "rotation": 0.5,
+                    "rotation_x": -4.0,
+                    "rotation_y": 3.0,
                     "opacity": 1.0,
-                    "ease": "linear"
+                    "ease": "ease-in-out"
                   },
                   {
-                    "at": 7.5,
+                    "at": 8.0,
                     "x": 540.0,
-                    "y": 326.40000000000003,
+                    "y": 595.2,
                     "scale": 1.0,
-                    "rotation": 0.0,
-                    "opacity": 0.0,
+                    "rotation": 2.0,
+                    "rotation_x": 8.0,
+                    "rotation_y": 10.0,
+                    "opacity": 1.0,
                     "ease": "linear"
                   }
                 ],
@@ -394,20 +443,41 @@
                 "mask": null,
                 "depth": null,
                 "occlusion": null,
+                "perspective": 1200.0,
                 "kind": "text",
-                "text": "FROM THE COAST\nTO THE NORTHERN LIGHTS",
-                "font": null,
-                "font_size": 60,
-                "color": "white",
+                "text": "CHASE THE\nCOAST",
+                "font": "examples/media/fonts/Anton-Regular.ttf",
+                "font_size": 160,
+                "color": "#f3f2e5",
                 "align": "center",
-                "stroke_width": 2,
+                "stroke_width": 0,
                 "stroke_color": "black",
-                "shadow_color": "#00000080",
+                "shadow_color": "#10152066",
                 "shadow_offset": [
-                  2,
-                  3
+                  0,
+                  4
                 ],
-                "spacing": 4
+                "spacing": 8,
+                "text_cues": [
+                  {
+                    "at": 3.0,
+                    "text": "CHASE THE\nLIGHT",
+                    "transition": 1.0,
+                    "stagger": 0.25,
+                    "blur": 1.5,
+                    "travel": 0.55
+                  },
+                  {
+                    "at": 5.5,
+                    "text": "TAKE THE LONG\nWAY HOME",
+                    "transition": 1.0,
+                    "stagger": 0.3,
+                    "blur": 1.5,
+                    "travel": 0.6
+                  }
+                ],
+                "surface": null,
+                "letter_drop": null
               }
             ],
             "audio": [

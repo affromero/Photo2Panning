@@ -27,6 +27,7 @@ from pic2panning import (
 )
 from pic2panning.schemas.base import PydanticBaseModel
 from pic2panning.schemas.creative.audio import BeatRequest
+from pic2panning.schemas.creative.typography import TextCue
 from pic2panning.schemas.editing import Adjust, EditRequest
 from pic2panning.schemas.jobs import Job
 from pic2panning.schemas.media import Encoding, EncodingPreset
@@ -37,6 +38,7 @@ DURATION = 8.0
 MUSIC = "examples/media/demo-music.wav"
 PHOTO = "examples/media/waterfall.jpg"
 SECOND_PHOTO = "examples/media/mountains.jpg"
+FONT = "examples/media/fonts/Anton-Regular.ttf"
 
 
 class Options(PydanticBaseModel):
@@ -146,31 +148,71 @@ def story(output: str, *, draft: bool) -> ComposeRequest:
             ),
             TextLayer(
                 id="title",
-                text="FROM THE COAST\nTO THE NORTHERN LIGHTS",
+                text="CHASE THE\nCOAST",
+                text_cues=(
+                    TextCue(
+                        at=3,
+                        text="CHASE THE\nLIGHT",
+                        transition=1,
+                        stagger=0.25,
+                        travel=0.55,
+                    ),
+                    TextCue(
+                        at=5.5,
+                        text="TAKE THE LONG\nWAY HOME",
+                        transition=1,
+                        stagger=0.3,
+                        travel=0.6,
+                    ),
+                ),
                 space="viewport",
                 size=Size(
                     width=round(960 * text_scale),
-                    height=round(240 * text_scale),
+                    height=round(440 * text_scale),
                 ),
-                font_size=round(60 * text_scale),
-                stroke_width=max(1, round(2 * text_scale)),
-                shadow_offset=(round(2 * text_scale), round(3 * text_scale)),
+                font=FONT,
+                font_size=round(160 * text_scale),
+                color="#f3f2e5",
+                shadow_color="#10152066",
+                shadow_offset=(0, round(4 * text_scale)),
+                spacing=round(8 * text_scale),
                 duration=DURATION,
                 keyframes=(
                     LayerKeyframe(
-                        at=0, x=size.width / 2, y=size.height * 0.17, opacity=0
-                    ),
-                    LayerKeyframe(
-                        at=0.5, x=size.width / 2, y=size.height * 0.17
-                    ),
-                    LayerKeyframe(
-                        at=6.5, x=size.width / 2, y=size.height * 0.17
-                    ),
-                    LayerKeyframe(
-                        at=7.5,
+                        at=0,
                         x=size.width / 2,
-                        y=size.height * 0.17,
-                        opacity=0,
+                        y=size.height * 0.32,
+                        scale=0.96,
+                        rotation_x=8,
+                        rotation_y=-15,
+                        rotation=-2,
+                        ease=Easing.EASE_OUT,
+                    ),
+                    LayerKeyframe(
+                        at=0.5,
+                        x=size.width / 2,
+                        y=size.height * 0.31,
+                        rotation_x=6,
+                        rotation_y=-10,
+                        rotation=-1.5,
+                        ease=Easing.EASE_IN_OUT,
+                    ),
+                    LayerKeyframe(
+                        at=4.5,
+                        x=size.width / 2,
+                        y=size.height * 0.31,
+                        rotation_x=-4,
+                        rotation_y=3,
+                        rotation=0.5,
+                        ease=Easing.EASE_IN_OUT,
+                    ),
+                    LayerKeyframe(
+                        at=8,
+                        x=size.width / 2,
+                        y=size.height * 0.31,
+                        rotation_x=8,
+                        rotation_y=10,
+                        rotation=2,
                     ),
                 ),
             ),
@@ -197,7 +239,7 @@ def write_job(path: str, request: Job, *, overwrite: bool) -> None:
     """Publish example JSON through the same atomic output protection."""
     with (
         atomic_output(
-            path, (PHOTO, SECOND_PHOTO, MUSIC), overwrite=overwrite
+            path, (PHOTO, SECOND_PHOTO, MUSIC, FONT), overwrite=overwrite
         ) as target,
         path_open(target, "w") as handle,
     ):

@@ -61,6 +61,14 @@ from pic2panning.schemas.creative.social import (
     SocialPackRequest,
     SocialVariant,
 )
+from pic2panning.schemas.creative.surface import (
+    LetterDrop,
+    SolidLight,
+    SolidText,
+    SurfaceAttachment,
+    SurfacePlane,
+)
+from pic2panning.schemas.creative.typography import TextCue
 from pic2panning.schemas.editing import (
     Adjust,
     Axis,
@@ -130,6 +138,7 @@ __all__ = [
     "Job",
     "JobResult",
     "LayerKeyframe",
+    "LetterDrop",
     "Lora",
     "MaskRequest",
     "MixTrack",
@@ -152,7 +161,12 @@ __all__ = [
     "Size",
     "SocialPackRequest",
     "SocialVariant",
+    "SolidLight",
+    "SolidText",
     "SourceTime",
+    "SurfaceAttachment",
+    "SurfacePlane",
+    "TextCue",
     "TextLayer",
     "VideoClip",
     "VideoLayer",

@@ -213,6 +213,34 @@ centers with the respective output axes and graphics uniformly with output
 width. Image and video `fit` selects `contain` or `cover`, preserving aspect.
 Text layers provide wrapping, fonts, color, stroke, and shadow controls.
 
+Text layers also provide timed sentence morphs, staggered 3D letter falls,
+and depth-fitted surface placement. `rotation` is clockwise Z rotation;
+`rotation_x` and `rotation_y` add out-of-plane angles. `perspective` sets a
+positive projection distance. See the [typography contract](typography.md)
+and the runnable [table composition](../examples/compose-table.json).
+
+`text_cues` use local `at`, target `text`, `transition`, `stagger`, `blur`,
+and `travel`. A completed target holds until the next transition. The
+renderer moves matching glyphs and reshapes changed ink contours. Cues
+must fit the layer and cannot overlap. `letter_drop` finishes before the
+first cue. Its duration includes staggered starts and the final landing.
+
+`surface.layer_id` selects an earlier depth-enabled image. Its `region`
+fits a plane in oriented source pixels. Surface-text keyframe centers use
+those host pixels; scale changes physical text width. Tilt, yaw, roll,
+metric offsets, and lift control the fitted pose. Nearer host geometry
+hides lettering automatically. A failed fit raises an error. Surface text
+uses world space and cannot also declare an `occlusion` field.
+
+`solid: {}` adds closed, beveled letter volumes, physical materials, and
+cast shadows through an installed Blender 4.2 or newer with Cycles Metal.
+It requires `surface`, opaque color, and zero cue blur. Text-layer masks,
+strokes, and shadow offsets are unsupported. Use pose opacity for fades.
+`thickness` and `bevel` use font heights. Key and fill lights stay fixed to
+the fitted patch; their positions use right/down/normal metres. Solid
+visibility uses source-depth holdout geometry. See
+[solid text setup and fields](typography.md#solid-letter-volumes).
+
 Video layers declare `source_start` and constant `speed`, or a monotone
 `source_times` map for speed ramps. Equal source times create frozen holds.
 Sampling stays within the actual source duration. Video-layer sound is
@@ -224,8 +252,10 @@ the default sample count is eight, with one to sixteen accepted. The first
 and last frames retain their exact endpoints. This is independent of the
 encoding frame rate and increases render cost.
 
-See [compose.json](../examples/compose.json) for a complete multi-photo
-camera path with a hold, viewport text, and sound. Output frames round up
+See [compose-editorial.json](../examples/compose-editorial.json) for a
+single-photo drift with a stable heading and changing small labels, or
+[compose.json](../examples/compose.json) for a multi-photo canvas with
+viewport text and sound. Output frames round up
 to `ceil(duration * fps)`. A `PreviewRequest` embeds the composition and
 selects either an exact `frame` index or an `at` time. It saves PNG through
 the same frame function used by exports.

@@ -18,6 +18,12 @@ from pic2panning.schemas.base import (
 )
 from pic2panning.schemas.creative.audio import MixTrack
 from pic2panning.schemas.creative.depth import DepthOcclusion, DepthStyle
+from pic2panning.schemas.creative.surface import (
+    LetterDrop,
+    SolidText,
+    SurfaceAttachment,
+)
+from pic2panning.schemas.creative.typography import TextCue
 from pic2panning.schemas.media import Alignment, Encoding
 
 
@@ -49,6 +55,8 @@ class LayerKeyframe(PydanticBaseModel):
     y: float
     scale: PositiveFloat = 1
     rotation: float = 0
+    rotation_x: float = 0
+    rotation_y: float = 0
     opacity: Annotated[float, Field(ge=0, le=1)] = 1
     ease: Easing = Easing.LINEAR
 
@@ -95,6 +103,8 @@ class LayerBase(PydanticBaseModel):
     mask: NonEmptyString | None = None
     depth: DepthStyle | None = None
     occlusion: DepthOcclusion | None = None
+    perspective: PositiveFloat = 1200
+    """Perspective focal length in authored layer pixels for 3D rotation."""
 
     @model_validator(mode="after")
     def validate_keyframes(self) -> Self:
@@ -163,6 +173,10 @@ class TextLayer(LayerBase):
     shadow_color: NonEmptyString = "#00000080"
     shadow_offset: tuple[int, int] = (0, 0)
     spacing: Annotated[int, Field(ge=0, strict=True)] = 4
+    text_cues: Annotated[tuple[TextCue, ...], Field(max_length=64)] = ()
+    surface: SurfaceAttachment | None = None
+    letter_drop: LetterDrop | None = None
+    solid: SolidText | None = None
 
     @field_validator("color", "stroke_color", "shadow_color")
     @classmethod
@@ -176,6 +190,55 @@ class TextLayer(LayerBase):
         """Depth effects require an image source and calibrated depth asset."""
         if self.depth is not None:
             raise ValueError("Text layers cannot declare depth effects")
+        if self.surface is not None and (
+            self.space != "world" or self.occlusion is not None
+        ):
+            raise ValueError(
+                "Surface text uses host pixels and automatic depth occlusion"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_solid(self) -> Self:
+        """Keep physical geometry separate from unsupported bitmap effects."""
+        if self.solid is None:
+            return self
+        if self.surface is None:
+            raise ValueError("Solid text requires a calibrated surface")
+        if self.mask or self.stroke_width or self.shadow_offset != (0, 0):
+            raise ValueError(
+                "Solid text uses physical bevels and shadows; "
+                "bitmap masks, strokes, and shadow offsets are unsupported"
+            )
+        color = ImageColor.getcolor(self.color, "RGBA")
+        if not isinstance(color, tuple) or len(color) != 4 or color[3] != 255:
+            raise ValueError(
+                "Solid text color must be opaque; use pose opacity"
+            )
+        if any(cue.blur for cue in self.text_cues):
+            raise ValueError("Solid text cues require blur=0")
+        return self
+
+    @model_validator(mode="after")
+    def validate_text_cues(self) -> Self:
+        """Keep sentence transitions ordered, bounded, and fully readable."""
+        if (self.text_cues or self.solid) and len(self.text) > 1024:
+            raise ValueError(
+                "Animated or solid text accepts at most 1024 characters"
+            )
+        end = self.letter_drop.duration if self.letter_drop else 0.0
+        if self.letter_drop and (len(self.text) > 256 or end > self.duration):
+            raise ValueError(
+                "Letter drop needs at most 256 characters and must fit the layer"
+            )
+        for cue in self.text_cues:
+            if cue.at < end - 1e-9:
+                raise ValueError(
+                    "Text cues cannot overlap another transition or letter drop"
+                )
+            end = cue.at + cue.transition
+            if end > self.duration + 1e-9:
+                raise ValueError("Text cue transition exceeds layer duration")
         return self
 
 
@@ -259,6 +322,28 @@ class ComposeRequest(PydanticBaseModel):
                     raise ValueError(
                         "Occlusion requires another layer with depth"
                     )
+        return self
+
+    @model_validator(mode="after")
+    def validate_surfaces(self) -> Self:
+        """Require a visible, calibrated host beneath its attached text."""
+        previous: dict[str, Layer] = {}
+        for layer in self.layers:
+            if isinstance(layer, TextLayer) and layer.surface is not None:
+                host = previous.get(layer.surface.layer_id)
+                if not isinstance(host, ImageLayer) or host.depth is None:
+                    raise ValueError(
+                        "Surface text requires an earlier image with depth"
+                    )
+                if (
+                    layer.start < host.start
+                    or layer.start + layer.duration
+                    > host.start + host.duration + 1e-9
+                ):
+                    raise ValueError(
+                        "Surface text must fit within its host's interval"
+                    )
+            previous[layer.id] = layer
         return self
 
     @model_validator(mode="after")

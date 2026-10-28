@@ -13,6 +13,8 @@ Apple Silicon.
   content fingerprints, cache policies, and execution reports.
 - [Depth guide](docs/depth.md): Bound float32 assets, CPU effects, text
   occlusion, source-pixel units, and observed latency.
+- [Typography guide](docs/typography.md): Editorial location titles,
+  glyph morphs, solid beveled letters, and text on depth-fitted surfaces.
 - [Local models](docs/models.md): Setup, quantization, pinned models,
   conditioning controls, and measured native memory use.
 - [Repository instructions](AGENTS.md): Contributor rules.
@@ -33,8 +35,18 @@ Runnable jobs:
   guides condition one FLUX 3 image.
 - [Guided video](examples/generate-video.json): LTX transition between
   independent public Cloud Gate photos.
-- [Composition](examples/compose.json): Multi-photo camera path, hold,
-  viewport text, beat markers, and an original soundtrack.
+- [Editorial story](examples/compose-editorial.json): Single-photo drift,
+  a stable serif heading, and secondary label opacity/position keyframes.
+- [Editorial preview](examples/preview-editorial.json): One editorial frame.
+- [Composition](examples/compose.json): Optional multi-photo camera path,
+  glyph transitions, beat markers, and an original soundtrack.
+- [Table letters](examples/compose-table.json): Solid beveled glyph falls,
+  cast shadows, tabletop attachment, holdouts, and a solid sentence morph.
+  Requires Blender with Cycles Metal; cached depth needs no model download.
+- [Table preview](examples/preview-table.json): The settled table sentence.
+- [Table depth](examples/table-depth.json): Extract the real tabletop asset.
+- [Cinemagraph](examples/cinemagraph.json): Keep steam moving over an
+  explicit frozen reference, using a bundled public clip and painted mask.
 - [Preview](examples/preview.json): Canonical PNG frame from that story.
 - [Beats](examples/beats.json): CPU onset analysis of the soundtrack.
 - [Social pack](examples/social-pack.json): Portrait, feed, square movies,
@@ -69,6 +81,12 @@ Dependency extras:
 - models: FLUX generation and repair; CPU Grounding DINO and SAM masks.
 - camera: pinned MoGe-2 inference and Metal Gaussian rendering.
 - video: local LTX first/last-frame generation.
+
+Solid lettering additionally requires an installed Blender 4.2 or newer
+with Cycles Metal. Discover blender on PATH or its standard macOS app
+path; solid.executable selects another installation. No extra Python ML
+packages are needed for the bundled table depth. Ordinary text/editorial
+jobs stay on the CPU and do not start Blender.
 
 FLUX 3 references are ordered. Optional source comes first, followed by
 references. At most ten conditioning images total are accepted. The native
@@ -119,6 +137,37 @@ Video source_times are monotone maps. Repeated source times freeze pixels;
 video sound comes from explicit MixTracks. Cinemagraph masks choose moving
 pixels over an explicit reference image or source reference_time.
 Masks and plates align to oriented source dimensions.
+TextLayer.text is the initial sentence. text_cues entries use local at,
+text, transition, stagger, blur, and travel. A cue's transition starts at
+at and ends at at+transition; completed sentences hold until another cue.
+Glyph correspondences move and changed ink shapes morph continuously.
+Cues must not overlap each other or letter_drop.
+For a stable heading with changing small labels, use separate TextLayers
+and local opacity/position keyframes as in compose-editorial.json.
+LayerKeyframe.rotation is clockwise Z; rotation_x/rotation_y add tilt.
+LayerBase.perspective is a positive projection distance in pixels.
+TextLayer.letter_drop uses duration, stagger, height in font heights,
+initial XYZ rotation, and bounded bounce. It completes before text cues.
+TextLayer.surface identifies an earlier depth-enabled image by layer_id.
+region is an oriented source-pixel planar patch, with exclusive right and
+bottom edges. Surface-text keyframe centers use host source pixels.
+scale changes physical text width; rotation adds in-plane roll. tilt,
+yaw, roll, offset_metres, and lift_metres control the surface pose.
+Flat surface lettering uses depth_tolerance_metres and feather_metres.
+A nonplanar or degenerate fit raises an error. Surface text uses world
+space and automatic visibility; do not also declare occlusion.
+TextLayer.solid creates closed beveled glyph volumes with physical
+lighting, cast shadows, and source-depth holdout visibility during drops,
+holds, and morphs. It requires surface and opaque color. Bitmap masks,
+strokes, and shadow offsets are unsupported; all cue blur must be zero.
+Use keyframe opacity for fades. SolidText exposes thickness=.2 and
+bevel=.02 in font heights, including bevels in thickness. Bevel is less
+than half the thickness. roughness=.36, metallic=0, samples=64, ambient=.25.
+key/fill area lights stay fixed to the fitted patch centre. position uses
+right/down/normal metres, energy uses watts, and size is emitter diameter.
+Defaults use a 12 W key with a 0.4 m emitter and a 6 W fill with a 0.5 m
+emitter; fill=null disables fill.
+Solid volumes use holdout geometry rather than the 2D plane tolerances.
 Compose shutter_angle defaults to 0. shutter_samples defaults to 8,
 with 1..16 accepted.
 Enabled exposure integrates samples in linear light; endpoints stay exact.
