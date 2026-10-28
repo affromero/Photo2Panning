@@ -1011,3 +1011,16 @@ dialog::backdrop {
     transition: none !important;
   }
 }
+.text-cue {
+  border-top: 1px solid var(--line);
+  padding: 10px 0;
+}
+.text-cue summary {
+  cursor: pointer;
+  color: var(--text);
+  font-size: 11px;
+  padding-bottom: 8px;
+}
+.text-cue[open] {
+  margin-bottom: 10px;
+}

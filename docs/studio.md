@@ -30,6 +30,13 @@ To browse the repository's existing example media, run from its root with
 5. Choose an aspect ratio and inspect its framing. **Export** renders the
    movie, a smaller draft, or a social pack with matching stills.
 
+For text, **Sentence morphs** adds timed target sentences. **Letter
+entrance** drops glyphs through 3D before the first transition.
+**Attach to image surface** selects a depth-enabled image and its
+flat patch. Set free X/Y/Z angles under **3D orientation**. The
+[typography guide](typography.md) shows both rendered examples and their
+editable JSON jobs.
+
 The player requests canonical still frames as the playhead moves. Movie
 exports use the declared frame rate and audio mix. Previews reuse existing
 media and cached depth; scrubbing does not start image generation or depth
@@ -37,7 +44,7 @@ inference.
 
 Exposure sampling increases CPU render time. One local run of the bundled
 eight-second story exported all three 1080-wide variants, three covers,
-and 24 carousel frames in 12 minutes 16 seconds on the 36 GiB M3 Max.
+and 24 carousel frames in 18 minutes 51 seconds on the 36 GiB M3 Max.
 It used 30 fps and eight samples at a 180-degree shutter angle. Use a draft
 to check framing before exporting at full size. The GIF previews omit sound;
 their linked MP4s retain the mix.

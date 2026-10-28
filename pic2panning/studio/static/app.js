@@ -26,6 +26,7 @@ const state = {
   path: 'projects/untitled.json',
   savedRevision: 0,
   dirty: false,
+  editGeneration: 0,
   selected: null,
   selectedNode: 'main',
   library: 'media',
@@ -98,7 +99,7 @@ function slug(value) {
   );
 }
 
-function render() {
+function render(options = {}) {
   if (!state.doc) return;
   $('#project-name').value = state.doc.name;
   $('#save-state').textContent = state.dirty
@@ -108,20 +109,22 @@ function render() {
       : 'Unsaved';
   $('#undo').disabled = !state.undo.length;
   $('#redo').disabled = !state.redo.length;
-  editor.render();
+  editor.render(options);
   actions.renderJobs();
 }
 
-function change(callback, preview = true) {
+function change(callback, preview = true, preserveInspector = false) {
   const before = JSON.stringify(state.doc);
   callback();
-  if (before === JSON.stringify(state.doc)) return;
+  if (before === JSON.stringify(state.doc)) return false;
+  state.editGeneration++;
   state.undo.push(before);
   if (state.undo.length > 60) state.undo.shift();
   state.redo = [];
   state.dirty = true;
-  render();
+  render({ preserveInspector });
   if (preview) schedulePreview();
+  return true;
 }
 
 function restore(direction) {
@@ -130,6 +133,7 @@ function restore(direction) {
   if (!source.length) return;
   target.push(JSON.stringify(state.doc));
   state.doc = JSON.parse(source.pop());
+  state.editGeneration++;
   state.dirty = true;
   if (!selectedLayer()) state.selected = composition().layers[0]?.id || null;
   state.time = Math.min(
@@ -337,10 +341,11 @@ function newProject() {
 
 async function saveProject() {
   try {
+    const session = state.session;
+    if (!(await flushEdits()) || session !== state.session) return;
     if (!state.savedRevision)
       state.path = `projects/${slug(state.doc.name)}.json`;
     const snapshot = clone(state.doc);
-    const session = state.session;
     const saved = await api('/api/project', {
       method: 'POST',
       data: {
@@ -364,6 +369,10 @@ async function saveProject() {
   } catch (error) {
     notify(error.message, true);
   }
+}
+
+async function flushEdits() {
+  return editor.flushEdits();
 }
 
 async function openProject(path) {
@@ -451,6 +460,7 @@ const app = {
   upload,
   submit,
   openProject,
+  flushEdits,
 };
 editor = createEditor(app);
 actions = createActions(app, editor);

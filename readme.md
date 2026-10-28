@@ -7,14 +7,17 @@
 [![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-black?logo=apple)](docs/models.md)
 [![Managed with uv](https://img.shields.io/badge/managed%20with-uv-DE5FE9?logo=uv)](https://docs.astral.sh/uv/)
 
-Build photo and video stories in a local visual editor, or run the same
-validated jobs from Python and the CLI. Animate a camera across a canvas
-of photos, mix sound, and export social crops with matching covers.
+Build photo and video stories with animated type in a local editor, or run
+the same validated jobs from Python and the CLI. Animate a camera across
+a canvas of photos, mix sound, and export social crops with matching covers.
+Drop letters onto photographed surfaces and morph sentences in perspective.
+Nearer objects can hide the lettering as it moves through the scene.
 Photo2Panning also reconstructs 3D scenes, reuses depth for image effects,
 and runs local FLUX edits, precise region repairs, segmentation, and
 image-guided video.
 
 [Quick start](#quick-start) · [Studio](#local-visual-studio) · [Demos](#demos) ·
+[Falling letters](#drop-letters-onto-a-table) · [Sentence morphs](#morph-between-sentences) ·
 [Projects](docs/projects.md) · [Depth effects](#reuse-depth-for-focus-and-occlusion) ·
 [FLUX edits](#change-the-season-with-flux) ·
 [Photo transition](#connect-two-pexels-photos) ·
@@ -28,6 +31,8 @@ image-guided video.
 | [<img src="examples/media/waterfall-pan.gif" alt="Complete portrait pan across the waterfall and coastal cliffs" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-pan.mp4) | [<img src="examples/media/mountain-zoom.gif" alt="Complete zoom into the snowy mountains and return to the original view" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/mountain-zoom.mp4) |
 | **3D camera excursion** | **Photo-to-photo transition** |
 | [<img src="examples/media/waterfall-camera.gif" alt="A 3D camera moves right and forward, then returns, with foreground and background moving differently" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-camera-excursion.mp4) | <img src="examples/media/bean-transition-first.png" alt="First guide: the oblique Cloud Gate photo" width="252"/><br/><img src="examples/media/bean-transition.gif" alt="A generated camera arc connects two different Pexels views of Cloud Gate" width="252"/><br/><img src="examples/media/bean-transition-last.png" alt="Last guide: the frontal Cloud Gate photo" width="252"/> |
+| **Letters falling onto a table** | **Sentence morphing** |
+| [<img src="examples/media/table-letters.gif" alt="Separate letters fall and rotate through three dimensions, land on the photographed table, then morph MAKE ROOM into MAKE TIME" width="252"/>](examples/media/table-letters.mp4) | [<img src="examples/media/social-story.gif" alt="Large letterforms reshape CHASE THE COAST into CHASE THE LIGHT and TAKE THE LONG WAY HOME during the camera move" width="252"/>](examples/media/social-story.mp4) |
 
 The pan and zoom previews show their complete motion; the camera preview
 isolates its 3D excursion. Those examples link to 1080 by 1920, 60 fps
@@ -75,9 +80,33 @@ See the [Studio guide](docs/studio.md) and
 
 ## Demos
 
-### Compose a story across several photos
+### Drop letters onto a table
 
-[<img src="examples/media/social-story.gif" alt="A continuous camera crosses the coastal photo, holds on the waterfall, and moves into the aurora photo with animated text" width="216"/>](examples/media/social-story.mp4)
+[<img src="examples/media/table-letters.gif" alt="Letters fall one by one with X, Y, and Z rotation onto a depth-fitted tabletop, then the landed sentence changes" width="300"/>](examples/media/table-letters.mp4)
+
+Each letter starts its own 3D fall, rotates, and settles on the table.
+The completed **MAKE ROOM** holds before its glyphs reshape into
+**MAKE TIME**. The cup and notebook hide lettering that passes behind
+them. A warm poster frame keeps the resting sentence clear of Story
+reply controls.
+
+```bash
+uv run pic2panning run examples/compose-table.json
+uv run pic2panning run examples/preview-table.json
+```
+
+The [job](examples/compose-table.json) uses the bundled photograph and its
+real, source-bound MoGe depth. The renderer fits a plane to the selected
+wood patch and projects each letter into that camera. Rendering the
+cached example uses the core install. See [text and surface controls](docs/typography.md).
+
+Photo: [Pavel Danilyuk, Pexels](https://www.pexels.com/photo/coffee-cup-on-wooden-table-6763887/).
+The example uses [Anton](examples/media/fonts/Anton-Regular.ttf), distributed
+with its [SIL Open Font License](examples/media/fonts/OFL.txt).
+
+### Morph between sentences
+
+[<img src="examples/media/social-story.gif" alt="A camera crosses the coast and aurora while large glyphs morph between three completed sentences" width="252"/>](examples/media/social-story.mp4)
 
 ```bash
 uv run pic2panning run examples/compose.json
@@ -85,10 +114,13 @@ uv run pic2panning run examples/preview.json
 uv run pic2panning run examples/social-pack.json
 ```
 
-The eight-second composition moves across the coast and aurora photos,
-pauses on a camera pose, and fades viewport text over an original 120 BPM
-soundtrack. The social pack renders portrait, feed, and square movies with
-a cover and carousel stills from the same canvas. Its music is synthesized
+The eight-second composition moves across the coast and aurora photos.
+**CHASE THE COAST** changes to **CHASE THE LIGHT**, then
+**TAKE THE LONG WAY HOME**. Matching letters keep their correspondence;
+changing glyphs travel and reshape their ink contours. Each completed
+sentence holds for reading. Changes begin at supplied 120 BPM markers.
+The MP4 keeps the original instrumental soundtrack; GIFs are silent.
+The music is synthesized
 by [the example script](examples/make_social_demo.py) and distributed under
 this repository's MIT license.
 
@@ -96,6 +128,35 @@ The [composition](examples/compose.json), [social pack](examples/social-pack.jso
 and [cached project](examples/project.json) are ordinary JSON jobs.
 They use the core install. The project prepares an image before rendering
 its selected target, with source hashes and cache hits in its report.
+
+### Export one composition for several formats
+
+<img src="examples/media/social-formats.jpg" alt="Actual portrait, feed, and square composition frames with matching title placement and cover and carousel stills" width="1000"/>
+
+The social pack reframes the same original canvas for 9:16 portrait,
+4:5 feed, and square movies. It also exports covers and chosen carousel
+frames. Preview guides stay in separate files. The caption remains within
+the viewport in every format.
+
+```bash
+uv run pic2panning run examples/social-pack.json
+```
+
+### Freeze the scene and keep the steam moving
+
+[<img src="examples/media/coffee-cinemagraph.gif" alt="Steam curls above the coffee while the cup, tray, and surrounding scene remain frozen" width="576"/>](examples/media/coffee-cinemagraph.mp4)
+
+The video layer combines a real four-second clip with an explicit frozen
+reference frame. A painted, feathered mask keeps only the steam moving.
+Before encoding, every pixel outside that prepared selection stays equal
+to the reference frame.
+
+```bash
+uv run pic2panning run examples/cinemagraph.json
+```
+
+Video: [Samer Daboul, Pexels](https://www.pexels.com/video/coffee-time-1216594/).
+The bundled excerpt is 768×432 at 24 fps.
 
 ### Reuse depth for focus and occlusion
 
@@ -302,21 +363,24 @@ their credits appear in the [video example](#connect-two-pexels-photos).
 
 ## Features
 
-| Tool | Controls |
-| --- | --- |
-| Local Studio | Timeline, layer controls, canonical previews, saved JSON, queued jobs |
-| Compositions | Multiple photos, camera holds and easing, text and graphic transforms |
-| Projects and cache | Explicit dependencies, source hashes, verified intermediate reuse |
-| Depth effects | Metric extraction, rack focus, fog, lighting, parallax, text occlusion |
-| Selective motion | Painted or segmented image masks, clean plates, video cinemagraphs |
-| Photo motion | Four pan directions, zoom, return path, slower center motion |
-| 3D camera | Local scene reconstruction, calibrated excursion, return and resumed pan |
-| Video | Crop to a new aspect ratio, bouncing pan, zoom, playback speed |
-| Generated video | Local LTX shot guided by a first and last photo |
-| Audio and titles | Retain source sound, replace or loop music, add title cards |
-| Audio editing | Music, voice and ambience mixing, gain, fades, ducking, beat markers |
-| Image editing | Crop, resize, rotate, flip, brightness, contrast, saturation |
-| Local models | Ordered FLUX 3 references, context-crop repair, masked fill, segmentation |
+| Tool | Controls | Example |
+| --- | --- | --- |
+| Local Studio | Timeline, layer controls, canonical previews, saved JSON, queued jobs | [Editor](#local-visual-studio) |
+| Compositions | Multiple photos, camera holds and easing, text and graphic transforms | [Morphing story](#morph-between-sentences) |
+| Perspective type | XYZ rotation, timed glyph morphs, staggered letter falls | [Letters](#drop-letters-onto-a-table) |
+| Surface type | Depth-fitted planes, metric offsets, nearer-object occlusion | [Table job](examples/compose-table.json) |
+| Projects and cache | Explicit dependencies, source hashes, verified intermediate reuse | [Saved graph](examples/project.json) |
+| Social packs | Aspect variants, covers, carousel stills, separate guide previews | [Formats](#export-one-composition-for-several-formats) |
+| Depth effects | Metric extraction, rack focus, fog, lighting, parallax, text occlusion | [Depth movie](#reuse-depth-for-focus-and-occlusion) |
+| Selective motion | Painted or segmented image masks, clean plates, video cinemagraphs | [Steam](#freeze-the-scene-and-keep-the-steam-moving) |
+| Photo motion | Four pan directions, zoom, return path, slower center motion | [Pan and zoom](#pan-across-múlafossur-waterfall) |
+| 3D camera | Local scene reconstruction, calibrated excursion, return and resumed pan | [Excursion](#pan-pause-move-a-3d-camera-and-resume) |
+| Video | Crop to a new aspect ratio, bouncing pan, zoom, playback speed | [Video controls](#video-music-and-title-cards) |
+| Generated video | Local LTX shot guided by a first and last photo | [Photo transition](#connect-two-pexels-photos) |
+| Audio and titles | Retain source sound, replace or loop music, add title cards | [Soundtrack script](#soundtrack-a-finished-video) |
+| Audio editing | Music, voice and ambience mixing, gain, fades, ducking, beat markers | [Beats job](examples/beats.json), [scored movie](examples/media/social-story.mp4) |
+| Image editing | Crop, resize, rotate, flip, brightness, contrast, saturation | [Crop comparison](#edit-a-picture) |
+| Local models | Ordered FLUX 3 references, context-crop repair, masked fill, segmentation | [FLUX edits](#change-the-season-with-flux) |
 
 Sizes use **width, height**. `1080 1920` produces a 9:16 portrait video;
 `1920 1080` produces 16:9 landscape. Images retain their proportions and
@@ -356,7 +420,7 @@ GIF output requires an explicit frame rate that divides 100 exactly:
 `1`, `2`, `4`, `5`, `10`, `20`, `25`, `50`, or `100`.
 
 ```bash
-uv run pic2panning render photo.jpg \
+uv run pic2panning render examples/media/waterfall.jpg \
   --output pan.gif --motion panning-lr --duration 3 --fps 20
 ```
 
@@ -367,15 +431,16 @@ audio. A video pan bounces at the source edges; `--pan-speed` sets movement
 in output pixels per frame and defaults to `5`.
 
 ```bash
-uv run pic2panning render walk.mp4 \
-  --video --speed 2 --output walk-fast.mp4
+uv run pic2panning render examples/media/coffee-motion-source.mp4 \
+  --video --speed 2 --size 768 432 --fps 24 --output coffee-fast.mp4
 
-uv run pic2panning render wide.mp4 \
-  --video --motion panning-lr --output wide-portrait.mp4
+uv run pic2panning render examples/media/coffee-motion-source.mp4 \
+  --video --motion panning-lr --size 432 768 --fps 24 \
+  --pan-speed 1.5 --output coffee-portrait.mp4
 
 uv run pic2panning render examples/media/waterfall.jpg examples/media/mountains.jpg \
   --output trip.mp4 --motion zoom-in \
-  --audio music.m4a --audio-start 12 --loop-audio \
+  --audio examples/media/demo-music.wav --loop-audio \
   --cover "A weekend away"
 
 uv run pic2panning inspect trip.mp4
@@ -398,8 +463,9 @@ For YouTube audio, install its optional dependency with
 
 ```bash
 uv run python examples/add_music.py --help
-uv run python examples/add_music.py story.mp4 music.m4a \
-  --output story-scored.mp4 --start 12 --loop
+uv run python examples/add_music.py \
+  examples/media/coffee-motion-source.mp4 examples/media/demo-music.wav \
+  --output coffee-scored.mp4 --start 1 --loop
 ```
 
 The example copies the video stream without recompression and replaces any
@@ -493,6 +559,9 @@ Examples: [render](examples/render.json), [image edits](examples/edit.json),
 [ordered references](examples/generate-references.json),
 [depth](examples/depth.json), [composition](examples/compose.json),
 [preview](examples/preview.json), [beats](examples/beats.json),
+[table typography](examples/compose-table.json),
+[table depth](examples/table-depth.json),
+[cinemagraph](examples/cinemagraph.json),
 [social pack](examples/social-pack.json), [cached project](examples/project.json).
 
 ## Local models

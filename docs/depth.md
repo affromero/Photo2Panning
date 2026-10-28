@@ -30,6 +30,10 @@ references `examples/media/depth/waterfall-depth.depth.json`. The title's
 800-metre plane hides the text, with a two-metre feather. The semantic
 foreground mask keeps sky pixels clear.
 
+Depth also lets text rest on a photographed surface. The
+[table typography example](typography.md) fits a plane to a real wooden
+table, drops letters onto it, and uses nearer objects to hide the lettering.
+
 ## Extract another asset
 
 ```bash

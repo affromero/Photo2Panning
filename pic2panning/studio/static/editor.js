@@ -1,3 +1,5 @@
+import { createTypography } from './typography.js';
+
 export function initialComposition() {
   return {
     kind: 'compose',
@@ -76,6 +78,13 @@ export function createEditor(app) {
   ];
   const assetFor = (source) =>
     state.assets.find((asset) => asset.path === app.relative(source));
+  const typography = createTypography(app, {
+    field,
+    select,
+    check,
+    assetFor,
+    ensureFrame,
+  });
 
   function poseAt(frames, at) {
     let previous = frames[0];
@@ -92,10 +101,20 @@ export function createEditor(app) {
         else if (previous.ease === 'ease-in-out')
           progress = progress * progress * (3 - 2 * progress);
         const pose = { ...previous, at };
-        for (const key of ['x', 'y', 'scale', 'rotation', 'opacity', 'zoom'])
+        for (const key of [
+          'x',
+          'y',
+          'scale',
+          'rotation',
+          'rotation_x',
+          'rotation_y',
+          'opacity',
+          'zoom',
+        ])
           if (key in frame)
             pose[key] =
-              previous[key] + (frame[key] - previous[key]) * progress;
+              (previous[key] ?? 0) +
+              (frame[key] - (previous[key] ?? 0)) * progress;
         return pose;
       }
       previous = frame;
@@ -103,8 +122,7 @@ export function createEditor(app) {
     return { ...previous, at };
   }
 
-  function snapTime(seconds) {
-    const markers = composition().beats || [];
+  function snapTime(seconds, markers = composition().beats || []) {
     if (!$('#snap-beats').checked || !markers.length) return seconds;
     const nearest = markers.reduce((best, marker) =>
       Math.abs(marker - seconds) < Math.abs(best - seconds) ? marker : best,
@@ -112,9 +130,12 @@ export function createEditor(app) {
     return Math.abs(nearest - seconds) <= 0.15 ? nearest : seconds;
   }
 
-  function ensureFrame(layer = selectedLayer()) {
-    const current = composition();
-    const global = snapTime(state.time);
+  function ensureFrame(
+    layer = selectedLayer(),
+    current = composition(),
+    seconds = state.time,
+  ) {
+    const global = snapTime(seconds, current.beats || []);
     const at = layer
       ? Math.max(0, Math.min(layer.duration, global - layer.start))
       : global;
@@ -371,8 +392,10 @@ export function createEditor(app) {
     );
     const pose = poseAt(layer.keyframes, local);
     let html = `<h3>${esc(layer.kind)} layer</h3><div class="tiny" title="${esc(layer.source || layer.id)}">${esc(layer.source ? assetFor(layer.source)?.name || layer.source.split('/').pop() : layer.id)}</div><div class="button-row"><button data-action="frame-layer">Camera to layer</button></div>`;
-    if (layer.kind === 'text')
+    if (layer.kind === 'text') {
       html += `<label>Text<textarea rows="3" data-scope="layer" data-field="text">${esc(layer.text)}</textarea></label><div class="field-grid">${field('Font size', 'layer', 'font_size', layer.font_size || 64, 'min="1" step="1"')}${text('Color', 'layer', 'color', layer.color || 'white')}</div>${select('Font', 'layer', 'font', layer.font || '', [['', 'Bundled font'], ...state.assets.filter((asset) => asset.kind === 'font').map((asset) => [asset.path, asset.name])])}<div class="field-grid">${field('Stroke width', 'layer', 'stroke_width', layer.stroke_width || 0, 'min="0" step="1"')}${text('Stroke color', 'layer', 'stroke_color', layer.stroke_color || 'black')}</div>`;
+      html += typography.panel(layer);
+    }
     html += `<h3>Transform at ${local.toFixed(2)} s</h3><div class="field-grid">${field('Center X', 'pose', 'x', pose.x)}${field('Center Y', 'pose', 'y', pose.y)}${field('Scale', 'pose', 'scale', pose.scale, 'min="0.001"')}${field('Rotation / °', 'pose', 'rotation', pose.rotation)}${field('Opacity', 'pose', 'opacity', pose.opacity, 'min="0" max="1"')}</div>${select('Following segment', 'pose', 'ease', pose.ease || 'linear', easings)}<div class="button-row"><button data-action="keyframe">◇ Add keyframe</button><button data-action="remove-keyframe">Remove keyframe</button></div><h3>Layer timing &amp; frame</h3><div class="field-grid">${field('Start / sec', 'layer', 'start', layer.start || 0, 'min="0"')}${field('Length / sec', 'layer', 'duration', layer.duration, 'min="0.01"')}${field('Width', 'layer', 'size.width', layer.size.width, 'min="1" step="1"')}${field('Height', 'layer', 'size.height', layer.size.height, 'min="1" step="1"')}</div>${select(
       'Coordinate space',
       'layer',
@@ -383,6 +406,7 @@ export function createEditor(app) {
         ['viewport', 'Output pixels'],
       ],
     )}`;
+    html += typography.posePanel(layer, pose);
     if (layer.kind !== 'text')
       html += select('Source fit', 'layer', 'fit', layer.fit || 'contain', [
         ['contain', 'Contain'],
@@ -401,7 +425,7 @@ export function createEditor(app) {
     const occluders = current.layers.filter(
       (item) => item.id !== layer.id && item.depth,
     );
-    if (occluders.length)
+    if (occluders.length && !layer.surface)
       html += `<h3>Depth occlusion</h3>${select('Place behind', 'layer', 'occlusion.layer_id', layer.occlusion?.layer_id || '', [['', 'No occlusion'], ...occluders.map((item) => [item.id, item.id])])}${layer.occlusion ? `<div class="field-grid">${field('Plane / metres', 'occlusion', 'plane_metres', layer.occlusion.plane_metres || 3, 'min="0.001"')}${field('Edge / metres', 'occlusion', 'feather_metres', layer.occlusion.feather_metres || 0, 'min="0"')}</div>` : ''}`;
     return (
       html +
@@ -485,7 +509,7 @@ export function createEditor(app) {
     });
   }
 
-  function render() {
+  function render({ preserveInspector = false } = {}) {
     const current = composition();
     $('#focus-layer').disabled = !selectedLayer();
     $('#view-label').textContent =
@@ -507,11 +531,12 @@ export function createEditor(app) {
         ),
       );
     renderLibrary();
-    renderInspector();
+    if (!preserveInspector) renderInspector();
     renderTimeline();
   }
 
   function updateField(input) {
+    if (typography.update(input)) return;
     const scope = input.dataset.scope;
     const path = input.dataset.field;
     if (!scope || scope === 'plate') return;
@@ -527,6 +552,7 @@ export function createEditor(app) {
           ? Number(input.value)
           : input.value;
     if (input.type === 'number' && !Number.isFinite(value)) return;
+    if (typography.standardField(scope, path, value, input)) return;
     const activeLayer = selectedLayer();
     if (scope === 'layer' && path === 'source_start') {
       const source = assetFor(activeLayer.source);
@@ -714,6 +740,13 @@ export function createEditor(app) {
       }
       const order = event.target.closest('[data-order]');
       if (order) {
+        if (composition().layers.some((layer) => layer.surface)) {
+          typography.reorder(
+            order.dataset.layerId,
+            Number(order.dataset.order),
+          );
+          return;
+        }
         change(() => {
           const layers = composition().layers;
           const index = layers.findIndex(
@@ -780,6 +813,13 @@ export function createEditor(app) {
       app.render();
     });
     document.addEventListener('click', async (event) => {
+      const typographyButton = event.target.closest(
+        '[data-typography-action]',
+      );
+      if (typographyButton) {
+        typography.action(typographyButton);
+        return;
+      }
       const button = event.target.closest('[data-action]');
       if (!button) return;
       const action = button.dataset.action;
@@ -792,7 +832,7 @@ export function createEditor(app) {
       if (action === 'keyframe') change(() => ensureFrame());
       if (action === 'frame-layer')
         change(() => {
-          const layer = selectedLayer();
+          const layer = typography.cameraLayer(selectedLayer());
           const pose = poseAt(
             layer.keyframes,
             Math.max(0, state.time - layer.start),
@@ -810,6 +850,8 @@ export function createEditor(app) {
           if (index > 0) frames.splice(index, 1);
         });
       if (action === 'delete-layer') {
+        if (!typography.guardHost(state.selected, 'deleting its surface host'))
+          return;
         if (composition().layers.length === 1) {
           notify('A composition needs at least one layer.', true);
           return;
@@ -830,13 +872,16 @@ export function createEditor(app) {
           delete layer.mask;
           delete layer.cinemagraph;
         });
-      if (action === 'remove-depth')
+      if (action === 'remove-depth') {
+        if (!typography.guardHost(state.selected, 'removing its depth'))
+          return;
         change(() => {
           delete selectedLayer().depth;
           for (const layer of composition().layers)
             if (layer.occlusion?.layer_id === state.selected)
               delete layer.occlusion;
         });
+      }
       if (action === 'attach-depth') {
         const metadata = $('#depth-metadata').value.trim();
         const layer = selectedLayer();
@@ -900,6 +945,17 @@ export function createEditor(app) {
     window.addEventListener('resize', render);
   }
 
+  async function flushEdits() {
+    const active = document.activeElement;
+    if (
+      active?.closest('#inspector') &&
+      (active.dataset.scope || active.dataset.typography) &&
+      active.value !== active.defaultValue
+    )
+      updateField(active);
+    return typography.flushEdits();
+  }
+
   return {
     render,
     renderLibrary,
@@ -911,5 +967,6 @@ export function createEditor(app) {
     ensureFrame,
     linkSource,
     assetFor,
+    flushEdits,
   };
 }

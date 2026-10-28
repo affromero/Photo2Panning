@@ -1,0 +1,71 @@
+{
+  "kind": "compose",
+  "canvas": {
+    "width": 768,
+    "height": 432
+  },
+  "duration": 4.0,
+  "camera": [
+    {
+      "at": 0.0,
+      "x": 384.0,
+      "y": 216.0,
+      "zoom": 1.0,
+      "ease": "linear"
+    }
+  ],
+  "layers": [
+    {
+      "id": "steam",
+      "start": 0.0,
+      "duration": 4.0,
+      "size": {
+        "width": 768,
+        "height": 432
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 384.0,
+          "y": 216.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "world",
+      "mask": null,
+      "depth": null,
+      "occlusion": null,
+      "kind": "video",
+      "source": "examples/media/coffee-motion-source.mp4",
+      "fit": "contain",
+      "source_start": 0.0,
+      "speed": 1.0,
+      "source_times": [],
+      "cinemagraph": {
+        "mask": "examples/media/coffee-motion-mask.png",
+        "reference": null,
+        "reference_time": 0.0,
+        "feather": 8.0
+      }
+    }
+  ],
+  "audio": [],
+  "beats": [],
+  "background": "black",
+  "output": "coffee-cinemagraph.mp4",
+  "size": {
+    "width": 768,
+    "height": 432
+  },
+  "fps": 24,
+  "shutter_angle": 0.0,
+  "shutter_samples": 8,
+  "encoding": {
+    "crf": 18,
+    "preset": "veryfast"
+  },
+  "overwrite": false
+}

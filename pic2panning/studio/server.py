@@ -326,6 +326,7 @@ class StudioHandler(BaseHTTPRequestHandler):
                     "app.js",
                     "editor.js",
                     "actions.js",
+                    "typography.js",
                 }:
                     raise FileNotFoundError("Unknown studio route")
                 self.serve_file(
