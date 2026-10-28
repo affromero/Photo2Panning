@@ -85,12 +85,14 @@ See the [Studio guide](docs/studio.md) and
 [<img src="examples/media/table-letters.gif" alt="Solid beveled letters fall individually onto a depth-fitted tabletop and cast shadows before the resting sentence changes" width="300"/>](examples/media/table-letters.mp4)
 
 Ivory letters have physical thickness, beveled edges, and cast shadows.
-Each enters from above the photo, rotates, and settles on the table. The completed
-**MAKE ROOM** holds before its glyphs reshape into **MAKE TIME**. The
-letters remain closed 3D meshes throughout the fall and sentence change.
+Each enters from above the photo, rotates, and settles on the table.
+The completed **MAKE ROOM** holds before its glyphs reshape into
+**MAKE TIME**. The letters remain closed 3D meshes throughout the fall
+and sentence change.
 Geometry inferred from the photograph hides letters passing behind the
 cup and notebook. A warm poster frame keeps the resting sentence above
-Story reply controls.
+Story reply controls. The linked MP4 contains the full 1080×1920, 30 fps
+render and its soundtrack.
 
 ```bash
 uv run pic2panning run examples/compose-table.json
