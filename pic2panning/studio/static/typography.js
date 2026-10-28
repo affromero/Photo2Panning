@@ -49,7 +49,7 @@ export function createTypography(app, helpers) {
           `<details class="text-cue" data-cue-index="${index}" ${expanded.has(index) ? 'open' : ''}><summary>Sentence ${index + 2} · ${cue.at.toFixed(2)} s</summary><label>Target sentence<textarea rows="3" data-typography="cue" data-type-index="${index}" data-type-cue-at="${cue.at}" data-type-field="text">${esc(cue.text)}</textarea></label><div class="field-grid">${control('Start / sec', 'cue', 'at', cue.at, 'min="0.001"', index)}${control('Transition / sec', 'cue', 'transition', cue.transition ?? 0.8, 'min="0.01" max="10"', index)}${control('Stagger / fraction', 'cue', 'stagger', cue.stagger ?? 0.25, 'min="0" max="0.8"', index)}${control('Blur / px', 'cue', 'blur', cue.blur ?? 1.5, 'min="0" max="32"', index)}${control('Curved travel / em', 'cue', 'travel', cue.travel ?? 0.6, 'min="0" max="4"', index)}</div><button data-typography-action="remove-cue" data-type-index="${index}" data-type-cue-at="${cue.at}">Remove sentence ${index + 2}</button></details>`,
       )
       .join('');
-    html += `<button class="wide" data-typography-action="add-cue" ${cues.length >= 64 ? 'disabled' : ''}>+ Morph to another sentence</button><h3>Letter entrance</h3>${check('Drop letters one by one in 3D', 'typography', 'letter_drop', Boolean(layer.letter_drop)).replace('data-scope="typography"', 'data-typography="drop-toggle"')}`;
+    html += `<button class="wide" data-typography-action="add-cue" ${cues.length >= 64 ? 'disabled' : ''}>+ Morph to another sentence</button><h3>Letter entrance</h3>${check('Drop letters one by one', 'typography', 'letter_drop', Boolean(layer.letter_drop)).replace('data-scope="typography"', 'data-typography="drop-toggle"')}`;
     if (layer.letter_drop) {
       const drop = layer.letter_drop;
       html += `<div class="field-grid">${control('Drop duration / sec', 'drop', 'duration', drop.duration, 'min="0.01"')}${control('Stagger / fraction', 'drop', 'stagger', drop.stagger, 'min="0" max="0.99"')}${control('Fall height / em', 'drop', 'height', drop.height, 'min="0.01" max="20"')}${control('Bounce / fraction', 'drop', 'bounce', drop.bounce, 'min="0" max="0.5"')}</div><div class="field-grid three">${control('Initial X / °', 'drop', 'rotation.0', drop.rotation?.[0] ?? 65)}${control('Initial Y / °', 'drop', 'rotation.1', drop.rotation?.[1] ?? -25)}${control('Initial Z / °', 'drop', 'rotation.2', drop.rotation?.[2] ?? -20)}</div><p>Letters land in the initial sentence before its first morph begins.</p>`;
@@ -69,8 +69,20 @@ export function createTypography(app, helpers) {
       const asset = host && assetFor(host.source);
       const region = surface.region;
       html += `<p>Patch and text centers use the original image pixels. Choose a flat part of the table; foreground objects hide the text automatically.</p><div class="field-grid">${control('Patch left / px', 'surface', 'region.0', region[0], `min="0" ${asset ? `max="${asset.width}"` : ''}`)}${control('Patch top / px', 'surface', 'region.1', region[1], `min="0" ${asset ? `max="${asset.height}"` : ''}`)}${control('Patch right / px', 'surface', 'region.2', region[2], `min="1" ${asset ? `max="${asset.width}"` : ''}`)}${control('Patch bottom / px', 'surface', 'region.3', region[3], `min="1" ${asset ? `max="${asset.height}"` : ''}`)}</div><div class="field-grid three">${control('Surface tilt / °', 'surface', 'tilt', surface.tilt ?? 0, 'min="-80" max="80"')}${control('Surface yaw / °', 'surface', 'yaw', surface.yaw ?? 0, 'min="-80" max="80"')}${control('Surface roll / °', 'surface', 'roll', surface.roll ?? 0)}</div><div class="field-grid">${control('Right offset / m', 'surface', 'offset_metres.0', surface.offset_metres?.[0] ?? 0)}${control('Down offset / m', 'surface', 'offset_metres.1', surface.offset_metres?.[1] ?? 0)}${control('Lift / m', 'surface', 'lift_metres', surface.lift_metres ?? 0, 'min="0"')}${control('Depth tolerance / m', 'surface', 'depth_tolerance_metres', surface.depth_tolerance_metres ?? 0.02, 'min="0"')}${control('Depth edge / m', 'surface', 'feather_metres', surface.feather_metres ?? 0.01, 'min="0"')}${control('Fit error / fraction', 'surface', 'max_relative_error', surface.max_relative_error ?? 0.02, 'min="0.0001" max="0.25"')}</div>`;
+      html += `<h3>Solid letters</h3>${check('Render beveled 3D letters', 'typography', 'solid', Boolean(layer.solid)).replace('data-scope="typography"', 'data-typography="solid-toggle"')}<p>Physical thickness, lighting and cast shadows. Requires Blender with Metal. Bitmap strokes, shadow offsets, masks and cue blur must be zero.</p>`;
+      if (layer.solid) html += solidPanel(layer.solid);
     }
     return html + '</div>';
+  }
+
+  function solidPanel(solid) {
+    let html = `<div class="field-grid">${control('Thickness / em', 'solid', 'thickness', solid.thickness ?? 0.2, 'min="0.001" max="2"')}${control('Bevel / em', 'solid', 'bevel', solid.bevel ?? 0.02, 'min="0" max="0.25"')}${control('Roughness', 'solid', 'roughness', solid.roughness ?? 0.36, 'min="0" max="1"')}${control('Metallic', 'solid', 'metallic', solid.metallic ?? 0, 'min="0" max="1"')}${control('Render samples', 'solid', 'samples', solid.samples ?? 64, 'min="1" max="4096" step="1"')}${control('Ambient light', 'solid', 'ambient', solid.ambient ?? 0.25, 'min="0" max="10"')}</div>`;
+    for (const name of ['key', 'fill']) {
+      const light = solid[name];
+      if (!light) continue;
+      html += `<details><summary>${name === 'key' ? 'Key' : 'Fill'} light</summary><div class="field-grid">${control('Power / W', 'solid', `${name}.energy`, light.energy, 'min="0.001"')}${control('Emitter diameter / m', 'solid', `${name}.size`, light.size, 'min="0.001"')}</div><div class="field-grid three">${control('Right / m', 'solid', `${name}.position.0`, light.position[0])}${control('Down / m', 'solid', `${name}.position.1`, light.position[1])}${control('Height / m', 'solid', `${name}.position.2`, light.position[2], 'min="0.001"')}</div><label>Light color<input data-typography="solid" data-type-field="${name}.color" value="${esc(light.color)}"></label></details>`;
+    }
+    return html;
   }
 
   function control(label, group, path, value, constraints = '', index = null) {
@@ -230,8 +242,13 @@ export function createTypography(app, helpers) {
               bounce: 0.15,
             };
           } else delete layer.letter_drop;
+        } else if (group === 'solid-toggle') {
+          if (value) layer.solid = {};
+          else delete layer.solid;
         } else if (group === 'surface-host') {
           if (!value) {
+            if (layer.solid)
+              throw new Error('Turn off solid letters before detaching the surface.');
             delete layer.surface;
             return;
           }
@@ -266,6 +283,7 @@ export function createTypography(app, helpers) {
           set(cue, path, value);
         } else if (group === 'drop') set(layer.letter_drop, path, value);
         else if (group === 'surface') set(layer.surface, path, value);
+        else if (group === 'solid') set(layer.solid, path, value);
       },
       undefined,
       input,
@@ -339,7 +357,7 @@ export function createTypography(app, helpers) {
           text: 'Next sentence',
           transition: 0.8,
           stagger: 0.25,
-          blur: 1.5,
+          blur: layer.solid ? 0 : 1.5,
           travel: 0.6,
         });
       }

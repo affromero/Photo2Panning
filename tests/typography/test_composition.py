@@ -7,6 +7,7 @@ import pytest
 from PIL import Image, ImageChops, ImageDraw
 from pydantic import ValidationError
 
+from pic2panning.api import run_operation
 from pic2panning.backends.creative.depth import DepthPrediction
 from pic2panning.schemas.base import Size
 from pic2panning.schemas.creative.composition import (
@@ -14,6 +15,7 @@ from pic2panning.schemas.creative.composition import (
     ComposeRequest,
     ImageLayer,
     LayerKeyframe,
+    PreviewRequest,
     TextLayer,
 )
 from pic2panning.schemas.creative.depth import (
@@ -21,7 +23,11 @@ from pic2panning.schemas.creative.depth import (
     DepthRequest,
     DepthStyle,
 )
-from pic2panning.schemas.creative.surface import LetterDrop, SurfaceAttachment
+from pic2panning.schemas.creative.surface import (
+    LetterDrop,
+    SolidText,
+    SurfaceAttachment,
+)
 from pic2panning.schemas.creative.typography import TextCue
 from pic2panning.tools.creative.depth import extract_depth
 from pic2panning.tools.creative.frames import (
@@ -118,6 +124,36 @@ def test_attached_text_is_visible_on_table_and_hidden_behind_cup(
             for y in range(result.height)
             for x in range(result.width)
         )
+
+
+@pytest.mark.parametrize("operation", ["compose", "preview"])
+def test_native_executable_output_alias_is_rejected_before_worker_launch(
+    scene: ComposeRequest, tmp_path: Path, operation: str
+) -> None:
+    """Standalone outputs preserve an explicit native executable's source bytes."""
+    executable = tmp_path / (
+        "native.mp4" if operation == "compose" else "native.png"
+    )
+    original = b"protected native executable bytes"
+    executable.write_bytes(original)
+    text = scene.layers[-1]
+    assert isinstance(text, TextLayer)
+    solid = text.model_copy(
+        update={"solid": SolidText(executable=str(executable))}
+    )
+    request = scene.model_copy(update={"layers": (scene.layers[0], solid)})
+    job = (
+        request.model_copy(
+            update={"output": str(executable), "overwrite": True}
+        )
+        if operation == "compose"
+        else PreviewRequest(
+            composition=request, output=str(executable), overwrite=True
+        )
+    )
+    with pytest.raises(ValueError, match="aliases an input"):
+        run_operation(job)
+    assert executable.read_bytes() == original
 
 
 def test_surface_text_multiplies_host_and_own_opacity_once(

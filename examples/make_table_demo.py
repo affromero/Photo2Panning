@@ -20,6 +20,7 @@ from pic2panning import (
 from pic2panning.schemas.base import PydanticBaseModel
 from pic2panning.schemas.creative.surface import (
     LetterDrop,
+    SolidText,
     SurfaceAttachment,
 )
 from pic2panning.schemas.creative.typography import TextCue
@@ -68,13 +69,13 @@ def table_story(output: str, *, draft: bool) -> ComposeRequest:
                         text="MAKE TIME",
                         transition=1.1,
                         stagger=0.3,
-                        blur=1.2,
-                        travel=0.5,
+                        blur=0,
+                        travel=0.12,
                     ),
                 ),
                 font=FONT,
                 font_size=240,
-                color="#241d14",
+                color="#eee1c3",
                 spacing=10,
                 duration=DURATION,
                 size=Size(width=1200, height=300),
@@ -89,10 +90,11 @@ def table_story(output: str, *, draft: bool) -> ComposeRequest:
                 letter_drop=LetterDrop(
                     duration=2,
                     stagger=0.6,
-                    height=6,
+                    height=12,
                     rotation=(65, -25, -28),
                     bounce=0.12,
                 ),
+                solid=SolidText(),
             ),
         ),
         audio=(MixTrack(source=MUSIC, duration=DURATION, fade_out=0.6),),
@@ -102,8 +104,7 @@ def table_story(output: str, *, draft: bool) -> ComposeRequest:
         if draft
         else Size(width=1080, height=1920),
         fps=12 if draft else 30,
-        shutter_angle=0 if draft else 180,
-        shutter_samples=8,
+        shutter_angle=0,
         encoding=Encoding(
             crf=22 if draft else 16,
             preset=EncodingPreset.FAST if draft else EncodingPreset.SLOW,

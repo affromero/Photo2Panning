@@ -117,6 +117,93 @@ def test_changed_glyphs_preserve_visible_ink_through_the_midpoint() -> None:
         animator.close()
 
 
+def test_solid_ink_reveals_inserted_letters_before_halfway_without_fading() -> (
+    None
+):
+    """An entering solid has actual visible geometry before 50% progress."""
+    layer = text_layer(
+        "O",
+        (TextCue(at=1, text="OI", transition=1, stagger=0, blur=0),),
+    )
+    animator = TextAnimator(layer)
+    samples = animator.ink_frame(1.4)
+    try:
+        assert len(samples) == 2
+        entering = samples[-1].mask
+        assert entering.mode == "L"
+        assert entering.getbbox() is not None
+        assert entering.getextrema()[1] == 255
+        assert samples[0].x < samples[1].x
+    finally:
+        for sample in samples:
+            sample.close()
+        animator.close()
+
+
+def test_solid_ink_stays_owned_and_reproducible_after_scrubbing() -> None:
+    """A native renderer can retain its sample while layouts are evicted."""
+    layer = text_layer(
+        cues=(
+            TextCue(at=1, text="KEEP THE LIGHT", transition=0.8, blur=0),
+            TextCue(at=3, text="MAKE TIME", transition=1, blur=0),
+        )
+    )
+    animator = TextAnimator(layer)
+    held = animator.ink_frame(1.4)
+    first = tuple(
+        (sample.x, sample.y, sample.mask.tobytes()) for sample in held
+    )
+    for seconds in (5, 0, 3.5, 2):
+        for sample in animator.ink_frame(seconds):
+            sample.close()
+    repeated = animator.ink_frame(1.4)
+    animator.close()
+    try:
+        assert first == tuple(
+            (sample.x, sample.y, sample.mask.tobytes()) for sample in repeated
+        )
+        assert all(sample.mask.mode == "L" for sample in held)
+        assert any(sample.mask.getbbox() for sample in held)
+    finally:
+        for sample in (*held, *repeated):
+            sample.close()
+
+
+def test_equal_length_word_changes_keep_letter_motion_in_reading_order() -> (
+    None
+):
+    """ROOM becomes TIME in place, without crossing or extra fading letters."""
+    layer = text_layer(
+        "MAKE ROOM",
+        (
+            TextCue(
+                at=1,
+                text="MAKE TIME",
+                transition=1,
+                stagger=0.3,
+                blur=0,
+                travel=0.12,
+            ),
+        ),
+    )
+    animator = TextAnimator(layer)
+    try:
+        for moment in (1.1, 1.25, 1.5, 1.75, 1.9):
+            samples = animator.ink_frame(moment)
+            try:
+                assert len(samples) == len("MAKEROOM")
+                centers = [
+                    sample.x + sample.mask.width / 2 for sample in samples
+                ]
+                assert centers == sorted(centers)
+                assert all(sample.mask.getbbox() for sample in samples)
+            finally:
+                for sample in samples:
+                    sample.close()
+    finally:
+        animator.close()
+
+
 def test_nonmonotone_preview_times_reproduce_the_same_morph_pixels() -> None:
     """Scrubbing across several sentences does not alter a repeated frame."""
     layer = text_layer(

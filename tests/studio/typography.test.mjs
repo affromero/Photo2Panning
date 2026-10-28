@@ -181,3 +181,40 @@ test('flushing edits waits for validation and preserves the chosen overwrite opt
   assert.equal(scene.app.composition().output, 'exports/movie.mp4');
   assert.deepEqual(scene.errors, []);
 });
+
+test('new solid sentences use geometry without bitmap blur', async () => {
+  const scene = studio();
+  const layer = scene.app.selectedLayer();
+  layer.solid = { thickness: 0.2 };
+  layer.duration = 10;
+  scene.typography.action({
+    dataset: { typographyAction: 'add-cue' },
+  });
+  await scene.started;
+  scene.release();
+  assert.equal(await scene.typography.flushEdits(), true);
+
+  const cue = scene.app.selectedLayer().text_cues.at(-1);
+  assert.equal(cue.blur, 0);
+  assert.ok(cue.at >= 5.5);
+  assert.equal(scene.app.selectedLayer().solid.thickness, 0.2);
+});
+
+test('detaching a surface requires turning off its solid letters first', async () => {
+  const scene = studio();
+  scene.app.selectedLayer().solid = { thickness: 0.2 };
+  scene.app.selectedLayer().surface = {
+    layer_id: 'table',
+    region: [10, 10, 90, 90],
+  };
+  scene.typography.update({
+    dataset: { typography: 'surface-host' },
+    type: 'select-one',
+    value: '',
+    checkValidity: () => true,
+  });
+  assert.equal(await scene.typography.flushEdits(), false);
+  assert.equal(scene.app.selectedLayer().surface.layer_id, 'table');
+  assert.equal(scene.app.selectedLayer().solid.thickness, 0.2);
+  assert.ok(scene.errors.some((message) => /solid.*detach/i.test(message)));
+});

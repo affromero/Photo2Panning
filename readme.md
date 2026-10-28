@@ -17,7 +17,7 @@ and runs local FLUX edits, precise region repairs, segmentation, and
 image-guided video.
 
 [Quick start](#quick-start) · [Studio](#local-visual-studio) · [Demos](#demos) ·
-[Falling letters](#drop-letters-onto-a-table) · [Sentence morphs](#morph-between-sentences) ·
+[Falling letters](#drop-letters-onto-a-table) · [Editorial type](#compose-an-editorial-story) ·
 [Projects](docs/projects.md) · [Depth effects](#reuse-depth-for-focus-and-occlusion) ·
 [FLUX edits](#change-the-season-with-flux) ·
 [Photo transition](#connect-two-pexels-photos) ·
@@ -31,8 +31,8 @@ image-guided video.
 | [<img src="examples/media/waterfall-pan.gif" alt="Complete portrait pan across the waterfall and coastal cliffs" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-pan.mp4) | [<img src="examples/media/mountain-zoom.gif" alt="Complete zoom into the snowy mountains and return to the original view" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/mountain-zoom.mp4) |
 | **3D camera excursion** | **Photo-to-photo transition** |
 | [<img src="examples/media/waterfall-camera.gif" alt="A 3D camera moves right and forward, then returns, with foreground and background moving differently" width="252"/>](https://github.com/affromero/Photo2Panning/releases/download/v0.3.1/waterfall-camera-excursion.mp4) | <img src="examples/media/bean-transition-first.png" alt="First guide: the oblique Cloud Gate photo" width="252"/><br/><img src="examples/media/bean-transition.gif" alt="A generated camera arc connects two different Pexels views of Cloud Gate" width="252"/><br/><img src="examples/media/bean-transition-last.png" alt="Last guide: the frontal Cloud Gate photo" width="252"/> |
-| **Letters falling onto a table** | **Sentence morphing** |
-| [<img src="examples/media/table-letters.gif" alt="Separate letters fall and rotate through three dimensions, land on the photographed table, then morph MAKE ROOM into MAKE TIME" width="252"/>](examples/media/table-letters.mp4) | [<img src="examples/media/social-story.gif" alt="Large letterforms reshape CHASE THE COAST into CHASE THE LIGHT and TAKE THE LONG WAY HOME during the camera move" width="252"/>](examples/media/social-story.mp4) |
+| **Solid letters on a table** | **Editorial location story** |
+| [<img src="examples/media/table-letters.gif" alt="Ivory letters with beveled edges, physical thickness, and cast shadows fall onto the photographed table, then reshape MAKE ROOM into MAKE TIME" width="252"/>](examples/media/table-letters.mp4) | [<img src="examples/media/waterfall-editorial.gif" alt="A restrained Múlafossur title stays readable during a gentle camera move while the small geographic label changes" width="252"/>](examples/media/waterfall-editorial.mp4) |
 
 The pan and zoom previews show their complete motion; the camera preview
 isolates its 3D excursion. Those examples link to 1080 by 1920, 60 fps
@@ -82,13 +82,15 @@ See the [Studio guide](docs/studio.md) and
 
 ### Drop letters onto a table
 
-[<img src="examples/media/table-letters.gif" alt="Letters fall one by one with X, Y, and Z rotation onto a depth-fitted tabletop, then the landed sentence changes" width="300"/>](examples/media/table-letters.mp4)
+[<img src="examples/media/table-letters.gif" alt="Solid beveled letters fall individually onto a depth-fitted tabletop and cast shadows before the resting sentence changes" width="300"/>](examples/media/table-letters.mp4)
 
-Each letter starts its own 3D fall, rotates, and settles on the table.
-The completed **MAKE ROOM** holds before its glyphs reshape into
-**MAKE TIME**. The cup and notebook hide lettering that passes behind
-them. A warm poster frame keeps the resting sentence clear of Story
-reply controls.
+Ivory letters have physical thickness, beveled edges, and cast shadows.
+Each enters from above the photo, rotates, and settles on the table. The completed
+**MAKE ROOM** holds before its glyphs reshape into **MAKE TIME**. The
+letters remain closed 3D meshes throughout the fall and sentence change.
+Geometry inferred from the photograph hides letters passing behind the
+cup and notebook. A warm poster frame keeps the resting sentence above
+Story reply controls.
 
 ```bash
 uv run pic2panning run examples/compose-table.json
@@ -97,16 +99,50 @@ uv run pic2panning run examples/preview-table.json
 
 The [job](examples/compose-table.json) uses the bundled photograph and its
 real, source-bound MoGe depth. The renderer fits a plane to the selected
-wood patch and projects each letter into that camera. Rendering the
-cached example uses the core install. See [text and surface controls](docs/typography.md).
+wood patch and uses Blender's Cycles renderer on Metal for the letter
+volumes and lighting. This requires an installed Blender 4.2 or newer with
+Cycles Metal. The bundled depth avoids model downloads and extra Python
+model dependencies. See [solid text setup and controls](docs/typography.md#solid-letter-volumes).
 
 Photo: [Pavel Danilyuk, Pexels](https://www.pexels.com/photo/coffee-cup-on-wooden-table-6763887/).
 The example uses [Anton](examples/media/fonts/Anton-Regular.ttf), distributed
 with its [SIL Open Font License](examples/media/fonts/OFL.txt).
 
-### Morph between sentences
+### Compose an editorial story
 
-[<img src="examples/media/social-story.gif" alt="A camera crosses the coast and aurora while large glyphs morph between three completed sentences" width="252"/>](examples/media/social-story.mp4)
+[<img src="examples/media/waterfall-editorial.gif" alt="The Múlafossur location title remains fixed over the waterfall photograph while VÁGAR gives way to GÁSADALUR below it" width="324"/>](examples/media/waterfall-editorial.mp4)
+
+One photograph, a small camera drift, and a serif location title. The main
+**Múlafossur** heading stays intact for the full 5.5 seconds. The secondary
+label changes from **VÁGAR** to **GÁSADALUR** with a short fade and slight
+vertical movement. The title uses ordinary text layers and keyframes.
+This example is silent, ready for a soundtrack chosen for the post.
+
+```bash
+uv run pic2panning run examples/compose-editorial.json
+uv run pic2panning run examples/preview-editorial.json
+```
+
+The [composition](examples/compose-editorial.json) renders at 1080×1920,
+30 fps, with exposure sampling for the camera movement. The
+[generator](examples/make_editorial_demo.py) also writes a smaller draft.
+See [the typography guide](docs/typography.md#editorial-titles).
+
+The example bundles Instrument Serif and Manrope under their
+[font licenses](docs/typography.md#source-credits). Its fixed geographic
+kicker is a transparent graphic; the title and changing labels remain
+editable text. The photograph is the original public waterfall demo
+[from Pexels](https://images.pexels.com/photos/29188556/pexels-photo-29188556/free-photo-of-stunning-sunset-over-mulafossur-waterfall-faroe-islands.jpeg).
+
+### Build a multi-photo canvas
+
+<details>
+<summary>Camera paths, glyph morphs, cached projects, and social exports</summary>
+
+The optional technical example crosses the coast and aurora photographs
+on one world canvas. Its viewport headline uses timed glyph transitions,
+and its soundtrack supplies 120 BPM markers. Use it to inspect coordinate
+systems, sentence animation, and the project cache.
 
 ```bash
 uv run pic2panning run examples/compose.json
@@ -114,22 +150,18 @@ uv run pic2panning run examples/preview.json
 uv run pic2panning run examples/social-pack.json
 ```
 
-The eight-second composition moves across the coast and aurora photos.
-**CHASE THE COAST** changes to **CHASE THE LIGHT**, then
-**TAKE THE LONG WAY HOME**. Matching letters keep their correspondence;
-changing glyphs travel and reshape their ink contours. Each completed
-sentence holds for reading. Changes begin at supplied 120 BPM markers.
-The MP4 keeps the original instrumental soundtrack; GIFs are silent.
-The music is synthesized
-by [the example script](examples/make_social_demo.py) and distributed under
-this repository's MIT license.
+The [rendered technical example](examples/media/social-story.mp4) keeps its
+original instrumental soundtrack. The music is synthesized by
+[the example script](examples/make_social_demo.py) and distributed under
+this repository's MIT license. Glyph reshaping is documented in
+[the text controls](docs/typography.md#morph-between-sentences).
 
 The [composition](examples/compose.json), [social pack](examples/social-pack.json),
 and [cached project](examples/project.json) are ordinary JSON jobs.
 They use the core install. The project prepares an image before rendering
 its selected target, with source hashes and cache hits in its report.
 
-### Export one composition for several formats
+#### Export one composition for several formats
 
 <img src="examples/media/social-formats.jpg" alt="Actual portrait, feed, and square composition frames with matching title placement and cover and carousel stills" width="1000"/>
 
@@ -141,6 +173,8 @@ the viewport in every format.
 ```bash
 uv run pic2panning run examples/social-pack.json
 ```
+
+</details>
 
 ### Freeze the scene and keep the steam moving
 
@@ -366,9 +400,10 @@ their credits appear in the [video example](#connect-two-pexels-photos).
 | Tool | Controls | Example |
 | --- | --- | --- |
 | Local Studio | Timeline, layer controls, canonical previews, saved JSON, queued jobs | [Editor](#local-visual-studio) |
-| Compositions | Multiple photos, camera holds and easing, text and graphic transforms | [Morphing story](#morph-between-sentences) |
+| Compositions | Multiple photos, camera holds and easing, text and graphic transforms | [Editorial story](#compose-an-editorial-story), [canvas](#build-a-multi-photo-canvas) |
 | Perspective type | XYZ rotation, timed glyph morphs, staggered letter falls | [Letters](#drop-letters-onto-a-table) |
 | Surface type | Depth-fitted planes, metric offsets, nearer-object occlusion | [Table job](examples/compose-table.json) |
+| Solid type | Beveled letter volumes, physical materials, fixed lighting, cast shadows | [Blender setup](docs/typography.md#solid-letter-volumes) |
 | Projects and cache | Explicit dependencies, source hashes, verified intermediate reuse | [Saved graph](examples/project.json) |
 | Social packs | Aspect variants, covers, carousel stills, separate guide previews | [Formats](#export-one-composition-for-several-formats) |
 | Depth effects | Metric extraction, rack focus, fog, lighting, parallax, text occlusion | [Depth movie](#reuse-depth-for-focus-and-occlusion) |
@@ -558,6 +593,8 @@ Examples: [render](examples/render.json), [image edits](examples/edit.json),
 [segmentation](examples/mask.json), [context repair](examples/repair-vehicles.json),
 [ordered references](examples/generate-references.json),
 [depth](examples/depth.json), [composition](examples/compose.json),
+[editorial story](examples/compose-editorial.json),
+[editorial preview](examples/preview-editorial.json),
 [preview](examples/preview.json), [beats](examples/beats.json),
 [table typography](examples/compose-table.json),
 [table depth](examples/table-depth.json),

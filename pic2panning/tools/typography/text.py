@@ -139,6 +139,25 @@ class Glyph:
         self.image.close()
 
 
+class GlyphInk:
+    """One owned unstyled ink mask at its canonical sentence-space origin."""
+
+    mask: Image.Image
+    x: float
+    y: float
+
+    def __init__(
+        self, mask: Image.Image, position: tuple[float, float]
+    ) -> None:
+        """Transfer mask ownership to a sampled geometric glyph."""
+        self.mask = mask
+        self.x, self.y = position
+
+    def close(self) -> None:
+        """Release the only raster allocation owned by this glyph sample."""
+        self.mask.close()
+
+
 class TextLayout:
     """Own one whole-sentence texture and the matching visible glyph masks."""
 

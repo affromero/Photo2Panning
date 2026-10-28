@@ -37,13 +37,27 @@ flat patch. Set free X/Y/Z angles under **3D orientation**. The
 [typography guide](typography.md) shows both rendered examples and their
 editable JSON jobs.
 
+For letter volumes, attach a text layer to an image surface, then enable
+**Render beveled 3D letters** under **Solid letters**. Thickness, bevels,
+material settings, and fixed **Key light** and **Fill light** controls
+produce sidewalls and cast shadows during drops and glyph transitions.
+These previews and exports require Blender with Cycles Metal. The
+[solid text guide](typography.md#solid-letter-volumes) covers setup and
+accepted text styles. Ordinary 2D and editorial previews use the CPU.
+
+The [editorial story](../examples/compose-editorial.json) uses one photo
+and a steady location heading. Two small text layers change their labels
+through opacity and position keyframes. Its
+[preview job](../examples/preview-editorial.json) renders a frame without
+exporting the movie.
+
 The player requests canonical still frames as the playhead moves. Movie
 exports use the declared frame rate and audio mix. Previews reuse existing
 media and cached depth; scrubbing does not start image generation or depth
 inference.
 
 Exposure sampling increases CPU render time. One local run of the bundled
-eight-second story exported all three 1080-wide variants, three covers,
+optional eight-second canvas exported three 1080-wide variants, three covers,
 and 24 carousel frames in 18 minutes 51 seconds on the 36 GiB M3 Max.
 It used 30 fps and eight samples at a 180-degree shutter angle. Use a draft
 to check framing before exporting at full size. The GIF previews omit sound;

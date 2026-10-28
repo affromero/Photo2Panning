@@ -9,7 +9,7 @@ from PIL import Image, ImageChops
 from pydantic import ValidationError
 
 from pic2panning.schemas.base import Size
-from pic2panning.schemas.creative.composition import LayerKeyframe
+from pic2panning.schemas.creative.composition import LayerKeyframe, TextLayer
 from pic2panning.schemas.creative.surface import SurfaceAttachment
 from pic2panning.tools.creative.depth import DepthAsset
 from pic2panning.tools.typography.projection import (
@@ -26,6 +26,38 @@ from pic2panning.tools.typography.surface import (
 def attachment() -> SurfaceAttachment:
     """Select a source patch with known metric dimensions."""
     return SurfaceAttachment(layer_id="table", region=(40, 40, 120, 80))
+
+
+@pytest.mark.parametrize(
+    "updates",
+    [
+        {"surface": None},
+        {"text": "M" * 1025},
+        {"solid": {"thickness": 0.1, "bevel": 0.06}},
+        {"solid": {"key": {"position": [0, 0, -1], "energy": 2, "size": 1}}},
+        {"color": "#ffffff80"},
+        {"mask": "bitmap.png"},
+        {"stroke_width": 2},
+        {"shadow_offset": (2, 3)},
+        {"text_cues": [{"at": 1, "text": "NEXT", "blur": 1}]},
+    ],
+)
+def test_invalid_solid_geometry_and_bitmap_effects_fail_before_rendering(
+    updates: dict[str, object],
+) -> None:
+    """Native geometry rejects unsupported styling and excessive work upfront."""
+    request: dict[str, object] = {
+        "id": "letters",
+        "text": "MAKE ROOM",
+        "duration": 3,
+        "size": {"width": 160, "height": 80},
+        "keyframes": [{"x": 80, "y": 60}],
+        "surface": attachment().model_dump(),
+        "solid": {},
+    }
+    request.update(updates)
+    with pytest.raises(ValidationError):
+        TextLayer.model_validate(request)
 
 
 def test_surface_fit_recovers_metric_extent_and_source_anchor(

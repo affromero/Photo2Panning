@@ -6,7 +6,7 @@ from collections.abc import Iterator
 from contextlib import ExitStack
 from itertools import pairwise
 from types import TracebackType
-from typing import Self
+from typing import TYPE_CHECKING, Protocol, Self, cast
 
 from PIL import (
     Image,
@@ -16,6 +16,7 @@ from PIL import (
     ImageOps,
 )
 
+from pic2panning.backends.loading import load_dependency
 from pic2panning.errors import MediaError
 from pic2panning.schemas.base import Size
 from pic2panning.schemas.creative.composition import (
@@ -53,6 +54,31 @@ from pic2panning.tools.typography.rotation import (
 )
 from pic2panning.tools.typography.surface import fit_surface
 from pic2panning.tools.typography.text import TextLayout, text_image
+
+if TYPE_CHECKING:
+    from pic2panning.tools.typography.solid import SolidRenderer
+
+
+class SolidFactory(Protocol):
+    """Construct the optional native renderer only for a solid text layer."""
+
+    def __call__(
+        self,
+        layer: TextLayer,
+        context: SurfaceContext,
+        animator: TextAnimator,
+        directory: str,
+        *,
+        render_size: Size | None = None,
+    ) -> SolidRenderer:
+        """Borrow calibrated assets while owning the native worker lifetime."""
+        ...
+
+
+class SolidModule(Protocol):
+    """The native solid renderer's lazy public factory."""
+
+    SolidRenderer: SolidFactory
 
 
 def eased(progress: float, easing: Easing) -> float:
@@ -238,6 +264,7 @@ class CompositionSession:
     texts: dict[str, TextAnimator]
     surfaces: dict[str, SurfacePlane]
     drops: dict[str, LetterDropRenderer]
+    solids: dict[str, SolidRenderer]
 
     def __init__(
         self, request: ComposeRequest, *, preview: bool = False
@@ -255,6 +282,7 @@ class CompositionSession:
         self.texts = {}
         self.surfaces = {}
         self.drops = {}
+        self.solids = {}
 
     def __enter__(self) -> Self:
         """Validate and load sources, closing partial state on any failure."""
@@ -265,7 +293,29 @@ class CompositionSession:
             for layer in self.request.layers:
                 self.load_layer(layer)
             for layer in self.request.layers:
-                if isinstance(layer, TextLayer) and layer.letter_drop:
+                if not isinstance(layer, TextLayer):
+                    continue
+                if layer.solid is not None:
+                    host = self.host(layer)
+                    if layer.surface is None:
+                        raise ValueError("Solid text requires a surface")
+                    module = cast(
+                        "SolidModule",
+                        load_dependency("pic2panning.tools.typography.solid"),
+                    )
+                    self.solids[layer.id] = module.SolidRenderer(
+                        layer,
+                        SurfaceContext(
+                            asset=self.depths[host.id],
+                            attachment=layer.surface,
+                            plane=self.surfaces[layer.id],
+                        ),
+                        self.texts[layer.id],
+                        self.directory,
+                        render_size=self.solid_size(host),
+                    )
+                    self.stack.callback(self.solids[layer.id].close)
+                elif layer.letter_drop:
                     layout = TextLayout(
                         layer, layer.text, self.texts[layer.id].padding
                     )
@@ -297,7 +347,7 @@ class CompositionSession:
         """Load static assets and validate video and aligned-mask dimensions."""
         if isinstance(layer, TextLayer):
             self.images[layer.id] = self.own_image(text_image(layer))
-            if layer.text_cues or layer.letter_drop:
+            if layer.text_cues or layer.letter_drop or layer.solid:
                 self.texts[layer.id] = TextAnimator(layer)
                 self.stack.callback(self.texts[layer.id].close)
             if layer.surface is not None:
@@ -339,6 +389,17 @@ class CompositionSession:
             info = self.videos[layer.id].info
             return info.width, info.height
         return self.images[layer.id].size
+
+    def solid_size(self, host: ImageLayer) -> Size:
+        """Retain the largest source density required by the host's animation."""
+        pose = host.keyframes[0].model_copy(
+            update={"scale": max(frame.scale for frame in host.keyframes)}
+        )
+        camera = self.request.camera[0].model_copy(
+            update={"zoom": max(frame.zoom for frame in self.request.camera)}
+        )
+        width, height = self.working_size(host, pose, camera)
+        return Size(width=width, height=height)
 
     def load_cinemagraph(
         self, layer: VideoLayer, sampler: VideoSampler
@@ -485,7 +546,9 @@ class CompositionSession:
         style = rescale_depth_style(
             host.depth, self.source_size(host), working
         )
-        if layer.letter_drop and local < layer.letter_drop.duration:
+        if layer.id in self.solids:
+            projected = self.solids[layer.id].frame(local, pose)
+        elif layer.letter_drop and local < layer.letter_drop.duration:
             projected = self.drops[layer.id].surface_frame(
                 local,
                 pose,

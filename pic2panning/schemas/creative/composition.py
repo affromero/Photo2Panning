@@ -18,7 +18,11 @@ from pic2panning.schemas.base import (
 )
 from pic2panning.schemas.creative.audio import MixTrack
 from pic2panning.schemas.creative.depth import DepthOcclusion, DepthStyle
-from pic2panning.schemas.creative.surface import LetterDrop, SurfaceAttachment
+from pic2panning.schemas.creative.surface import (
+    LetterDrop,
+    SolidText,
+    SurfaceAttachment,
+)
 from pic2panning.schemas.creative.typography import TextCue
 from pic2panning.schemas.media import Alignment, Encoding
 
@@ -172,6 +176,7 @@ class TextLayer(LayerBase):
     text_cues: Annotated[tuple[TextCue, ...], Field(max_length=64)] = ()
     surface: SurfaceAttachment | None = None
     letter_drop: LetterDrop | None = None
+    solid: SolidText | None = None
 
     @field_validator("color", "stroke_color", "shadow_color")
     @classmethod
@@ -194,10 +199,33 @@ class TextLayer(LayerBase):
         return self
 
     @model_validator(mode="after")
+    def validate_solid(self) -> Self:
+        """Keep physical geometry separate from unsupported bitmap effects."""
+        if self.solid is None:
+            return self
+        if self.surface is None:
+            raise ValueError("Solid text requires a calibrated surface")
+        if self.mask or self.stroke_width or self.shadow_offset != (0, 0):
+            raise ValueError(
+                "Solid text uses physical bevels and shadows; "
+                "bitmap masks, strokes, and shadow offsets are unsupported"
+            )
+        color = ImageColor.getcolor(self.color, "RGBA")
+        if not isinstance(color, tuple) or len(color) != 4 or color[3] != 255:
+            raise ValueError(
+                "Solid text color must be opaque; use pose opacity"
+            )
+        if any(cue.blur for cue in self.text_cues):
+            raise ValueError("Solid text cues require blur=0")
+        return self
+
+    @model_validator(mode="after")
     def validate_text_cues(self) -> Self:
         """Keep sentence transitions ordered, bounded, and fully readable."""
-        if self.text_cues and len(self.text) > 1024:
-            raise ValueError("Animated text accepts at most 1024 characters")
+        if (self.text_cues or self.solid) and len(self.text) > 1024:
+            raise ValueError(
+                "Animated or solid text accepts at most 1024 characters"
+            )
         end = self.letter_drop.duration if self.letter_drop else 0.0
         if self.letter_drop and (len(self.text) > 256 or end > self.duration):
             raise ValueError(

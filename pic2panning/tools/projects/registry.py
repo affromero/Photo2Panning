@@ -39,7 +39,13 @@ INPUT_FIELDS = {
     "reference",
     "path",
 }
-SELECTOR_FIELDS = {"weights", "text_weights", "detector", "segmenter"}
+SELECTOR_FIELDS = {
+    "weights",
+    "text_weights",
+    "detector",
+    "segmenter",
+    "executable",
+}
 
 type Location = tuple[str | int, ...]
 
@@ -152,7 +158,7 @@ def local_destination(workspace: str, value: str) -> str:
 
 
 def local_selector(workspace: str, value: str) -> bool:
-    """Distinguish explicit local weights from model repository names."""
+    """Distinguish explicit local selectors from model repository names."""
     return (
         pathlib.Path(path_expanduser(value)).is_absolute()
         or value.startswith((".", "~"))
@@ -224,7 +230,7 @@ def outputs(operation: Operation) -> tuple[str, ...]:
 def file_inputs(
     operation: Operation, skip_manifests: frozenset[str] = frozenset()
 ) -> tuple[str, ...]:
-    """Include transitive depth artifacts, fonts, masks, tracks, and weights."""
+    """Include depth artifacts, media, fonts, weights, and native executables."""
     paths: list[str] = []
     for binding in bindings(operation):
         if binding.role == "selector" and not path_exists(binding.value):

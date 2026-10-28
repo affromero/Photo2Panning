@@ -63,6 +63,8 @@ from pic2panning.schemas.creative.social import (
 )
 from pic2panning.schemas.creative.surface import (
     LetterDrop,
+    SolidLight,
+    SolidText,
     SurfaceAttachment,
     SurfacePlane,
 )
@@ -159,6 +161,8 @@ __all__ = [
     "Size",
     "SocialPackRequest",
     "SocialVariant",
+    "SolidLight",
+    "SolidText",
     "SourceTime",
     "SurfaceAttachment",
     "SurfacePlane",

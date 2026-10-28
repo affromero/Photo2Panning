@@ -1,0 +1,270 @@
+{
+  "kind": "compose",
+  "canvas": {
+    "width": 1920,
+    "height": 1280
+  },
+  "duration": 5.5,
+  "camera": [
+    {
+      "at": 0.0,
+      "x": 1030.0,
+      "y": 640.0,
+      "zoom": 1.0,
+      "ease": "ease-in-out"
+    },
+    {
+      "at": 5.5,
+      "x": 1090.0,
+      "y": 640.0,
+      "zoom": 1.0,
+      "ease": "linear"
+    }
+  ],
+  "layers": [
+    {
+      "id": "waterfall",
+      "start": 0.0,
+      "duration": 5.5,
+      "size": {
+        "width": 1920,
+        "height": 1280
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 960.0,
+          "y": 640.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "world",
+      "mask": null,
+      "depth": null,
+      "occlusion": null,
+      "perspective": 1200.0,
+      "kind": "image",
+      "source": "examples/media/waterfall.jpg",
+      "fit": "contain"
+    },
+    {
+      "id": "geography",
+      "start": 0.0,
+      "duration": 5.5,
+      "size": {
+        "width": 900,
+        "height": 60
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 538.0,
+          "y": 282.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "viewport",
+      "mask": null,
+      "depth": null,
+      "occlusion": null,
+      "perspective": 1200.0,
+      "kind": "image",
+      "source": "examples/media/faroe-islands-label.png",
+      "fit": "contain"
+    },
+    {
+      "id": "place",
+      "start": 0.0,
+      "duration": 5.5,
+      "size": {
+        "width": 900,
+        "height": 260
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 530.0,
+          "y": 440.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "viewport",
+      "mask": null,
+      "depth": null,
+      "occlusion": null,
+      "perspective": 1200.0,
+      "kind": "text",
+      "text": "Múlafossur",
+      "font": "examples/media/fonts/InstrumentSerif-Regular.ttf",
+      "font_size": 205,
+      "color": "#f6f0e4",
+      "align": "left",
+      "stroke_width": 0,
+      "stroke_color": "black",
+      "shadow_color": "#00000080",
+      "shadow_offset": [
+        0,
+        0
+      ],
+      "spacing": 4,
+      "text_cues": [],
+      "surface": null,
+      "letter_drop": null,
+      "solid": null
+    },
+    {
+      "id": "island",
+      "start": 0.0,
+      "duration": 2.4,
+      "size": {
+        "width": 900,
+        "height": 60
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 538.0,
+          "y": 550.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        },
+        {
+          "at": 2.0,
+          "x": 538.0,
+          "y": 550.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "ease-in-out"
+        },
+        {
+          "at": 2.35,
+          "x": 538.0,
+          "y": 542.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 0.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "viewport",
+      "mask": null,
+      "depth": null,
+      "occlusion": null,
+      "perspective": 1200.0,
+      "kind": "text",
+      "text": "VÁGAR",
+      "font": "examples/media/fonts/Manrope-Medium.ttf",
+      "font_size": 24,
+      "color": "#f6f0e4",
+      "align": "left",
+      "stroke_width": 0,
+      "stroke_color": "black",
+      "shadow_color": "#00000080",
+      "shadow_offset": [
+        0,
+        0
+      ],
+      "spacing": 4,
+      "text_cues": [],
+      "surface": null,
+      "letter_drop": null,
+      "solid": null
+    },
+    {
+      "id": "village",
+      "start": 2.45,
+      "duration": 3.05,
+      "size": {
+        "width": 900,
+        "height": 60
+      },
+      "keyframes": [
+        {
+          "at": 0.0,
+          "x": 538.0,
+          "y": 558.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 0.0,
+          "ease": "ease-out"
+        },
+        {
+          "at": 0.5,
+          "x": 538.0,
+          "y": 550.0,
+          "scale": 1.0,
+          "rotation": 0.0,
+          "rotation_x": 0.0,
+          "rotation_y": 0.0,
+          "opacity": 1.0,
+          "ease": "linear"
+        }
+      ],
+      "space": "viewport",
+      "mask": null,
+      "depth": null,
+      "occlusion": null,
+      "perspective": 1200.0,
+      "kind": "text",
+      "text": "GÁSADALUR",
+      "font": "examples/media/fonts/Manrope-Medium.ttf",
+      "font_size": 24,
+      "color": "#f6f0e4",
+      "align": "left",
+      "stroke_width": 0,
+      "stroke_color": "black",
+      "shadow_color": "#00000080",
+      "shadow_offset": [
+        0,
+        0
+      ],
+      "spacing": 4,
+      "text_cues": [],
+      "surface": null,
+      "letter_drop": null,
+      "solid": null
+    }
+  ],
+  "audio": [],
+  "beats": [],
+  "background": "black",
+  "output": "outputs/editorial-demo/waterfall-editorial.mp4",
+  "size": {
+    "width": 1080,
+    "height": 1920
+  },
+  "fps": 30,
+  "shutter_angle": 180.0,
+  "shutter_samples": 8,
+  "encoding": {
+    "crf": 16,
+    "preset": "slow"
+  },
+  "overwrite": false
+}

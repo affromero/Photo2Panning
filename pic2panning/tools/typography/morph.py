@@ -11,7 +11,7 @@ from PIL import Image, ImageColor, ImageFilter
 
 from pic2panning.schemas.creative.composition import TextLayer
 from pic2panning.schemas.creative.typography import TextCue
-from pic2panning.tools.typography.text import Glyph, TextLayout
+from pic2panning.tools.typography.text import Glyph, GlyphInk, TextLayout
 
 FIELD_EDGE = 128
 
@@ -254,7 +254,7 @@ class GlyphPair:
         ):
             image.close()
 
-    def coverage(self, progress: float) -> Image.Image:
+    def coverage(self, progress: float, *, fade: bool = True) -> Image.Image:
         """Return owned deformed ink, without dissolving whole sentences."""
         if self.fields is not None:
             return morph_mask(self.fields, self.masks, progress)
@@ -267,20 +267,18 @@ class GlyphPair:
             mask.paste(0, (0, 0, mask.width, cut))
         else:
             mask.paste(0, (0, mask.height - cut, mask.width, mask.height))
+        if not fade:
+            return mask
         with mask.point(
             [round(value * visible) for value in range(256)]
         ) as faded:
             mask.paste(faded)
         return mask
 
-    def draw(
-        self,
-        destination: Image.Image,
-        progress: float,
-        cue: TextCue,
-        layer: TextLayer,
-    ) -> None:
-        """Move and reshape one correspondence along a smooth curved path."""
+    def position(
+        self, progress: float, cue: TextCue, layer: TextLayer
+    ) -> tuple[float, float]:
+        """Share the same curved sentence-space path across 2D and solid type."""
         first, second = self.origins
         x = first[0] + (second[0] - first[0]) * progress
         y = first[1] + (second[1] - first[1]) * progress
@@ -295,6 +293,34 @@ class GlyphPair:
             y += (1 - progress) * cue.travel * layer.font_size
         elif self.leaving:
             y -= progress * cue.travel * layer.font_size
+        return x, y
+
+    def ink(self, progress: float, cue: TextCue, layer: TextLayer) -> GlyphInk:
+        """Sample closed-solid ink without bitmap styling or opacity fades."""
+        x, y = self.position(progress, cue, layer)
+        wave = math.sin(progress * math.pi)
+        with self.coverage(progress, fade=False) as coverage:
+            if self.matched:
+                return GlyphInk(coverage.copy(), (x, y))
+            width = max(1, round(coverage.width * (1 + wave * 0.12)))
+            height = max(1, round(coverage.height * (1 - wave * 0.08)))
+            x -= (width - coverage.width) / 2
+            y -= (height - coverage.height) / 2
+            return GlyphInk(
+                coverage.resize((width, height), Image.Resampling.LANCZOS),
+                (x, y),
+            )
+
+    def draw(
+        self,
+        destination: Image.Image,
+        progress: float,
+        cue: TextCue,
+        layer: TextLayer,
+    ) -> None:
+        """Move and reshape one correspondence along a smooth curved path."""
+        x, y = self.position(progress, cue, layer)
+        wave = math.sin(progress * math.pi)
         if self.sprite is not None:
             paste_glyph(destination, self.sprite, (x, y))
             return
@@ -324,13 +350,19 @@ def correspondence(
 ) -> tuple[GlyphPair, ...]:
     """Match repeated glyphs deterministically and pair each replacement block."""
     first, second = before.glyphs, after.glyphs
-    matcher = SequenceMatcher(
-        a=tuple(glyph.text for glyph in first),
-        b=tuple(glyph.text for glyph in second),
-        autojunk=False,
-    )
     pairs: list[GlyphPair] = []
     try:
+        if len(first) == len(second):
+            pairs.extend(
+                GlyphPair(old, new)
+                for old, new in zip(first, second, strict=True)
+            )
+            return tuple(pairs)
+        matcher = SequenceMatcher(
+            a=tuple(glyph.text for glyph in first),
+            b=tuple(glyph.text for glyph in second),
+            autojunk=False,
+        )
         for opcode in matcher.get_opcodes():
             left, right, start, end = opcode[1:]
             pairs.extend(
@@ -402,20 +434,11 @@ class TextAnimator:
         """Draw staggered correspondences with a bounded preparation cache."""
         if previous == cue.text:
             return self.layout(previous).image.copy()
-        key = previous, cue.text
-        if self.active != key:
-            self.clear_pair()
-            self.pairs = correspondence(
-                self.layout(previous), self.layout(cue.text)
-            )
-            self.active = key
+        self.prepare_pair(previous, cue)
         frame = Image.new("RGBA", self.layer.size.as_tuple)
         try:
-            last = max(1, len(self.pairs) - 1)
             for index, pair in enumerate(self.pairs):
-                phase = smooth(
-                    (progress - cue.stagger * index / last) / (1 - cue.stagger)
-                )
+                phase = self.phase(progress, cue, index)
                 pair.draw(frame, phase, cue, self.layer)
         except BaseException:
             frame.close()
@@ -423,8 +446,25 @@ class TextAnimator:
         else:
             return frame
 
-    def frame(self, seconds: float) -> Image.Image:
-        """Return an owned exact hold or a moving, reshaped sentence texture."""
+    def prepare_pair(self, previous: str, cue: TextCue) -> None:
+        """Load one bounded correspondence shared by both rendering paths."""
+        key = previous, cue.text
+        if self.active != key:
+            self.clear_pair()
+            self.pairs = correspondence(
+                self.layout(previous), self.layout(cue.text)
+            )
+            self.active = key
+
+    def phase(self, progress: float, cue: TextCue, index: int) -> float:
+        """Evaluate the canonical stagger independently of sampling order."""
+        last = max(1, len(self.pairs) - 1)
+        return smooth(
+            (progress - cue.stagger * index / last) / (1 - cue.stagger)
+        )
+
+    def state(self, seconds: float) -> tuple[str, TextCue | None, float]:
+        """Resolve exact holds and the active cue before sampling any glyphs."""
         if (
             not math.isfinite(seconds)
             or not 0 <= seconds <= self.layer.duration
@@ -433,10 +473,40 @@ class TextAnimator:
         previous = self.layer.text
         for cue in self.layer.text_cues:
             if seconds <= cue.at:
-                return self.layout(previous).image.copy()
+                return previous, None, 0
             if seconds < cue.at + cue.transition:
-                return self.transition(
-                    previous, cue, (seconds - cue.at) / cue.transition
-                )
+                return previous, cue, (seconds - cue.at) / cue.transition
             previous = cue.text
-        return self.layout(previous).image.copy()
+        return previous, None, 0
+
+    def ink_frame(self, seconds: float) -> tuple[GlyphInk, ...]:
+        """Return caller-owned raw geometry masks for every visible glyph."""
+        previous, cue, progress = self.state(seconds)
+        prepared: list[GlyphInk] = []
+        try:
+            if cue is None or previous == cue.text:
+                prepared.extend(
+                    GlyphInk(glyph.mask.copy(), (glyph.x, glyph.y))
+                    for glyph in self.layout(previous).glyphs
+                )
+            else:
+                self.prepare_pair(previous, cue)
+                for index, pair in enumerate(self.pairs):
+                    prepared.append(
+                        pair.ink(
+                            self.phase(progress, cue, index), cue, self.layer
+                        )
+                    )
+        except BaseException:
+            for sample in prepared:
+                sample.close()
+            raise
+        else:
+            return tuple(prepared)
+
+    def frame(self, seconds: float) -> Image.Image:
+        """Return an owned exact hold or a moving, reshaped sentence texture."""
+        previous, cue, progress = self.state(seconds)
+        if cue is None:
+            return self.layout(previous).image.copy()
+        return self.transition(previous, cue, progress)

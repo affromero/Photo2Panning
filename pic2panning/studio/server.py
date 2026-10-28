@@ -66,7 +66,7 @@ CONTENT_POLICY = (
 
 
 class PreviewBusyError(RuntimeError):
-    """A canonical CPU preview is already rendering."""
+    """A canonical frame preview is already rendering."""
 
 
 class StudioState:
@@ -97,7 +97,7 @@ class StudioState:
         )
 
     def preview(self, request: PreviewSubmission) -> PreviewResult:
-        """Render a canonical frame with one active CPU preview at a time."""
+        """Render a canonical frame with one active preview at a time."""
         if not self.preview_lock.acquire(blocking=False):
             raise PreviewBusyError("Preview is busy; retry the latest frame")
         try:
