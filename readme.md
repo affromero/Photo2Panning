@@ -7,15 +7,19 @@
 [![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-black?logo=apple)](docs/models.md)
 [![Managed with uv](https://img.shields.io/badge/managed%20with-uv-DE5FE9?logo=uv)](https://docs.astral.sh/uv/)
 
-Turn photos into pans, zooms, and 3D camera moves. Reframe footage, change its
-speed, and add music or title cards. Photo2Panning also provides image
-editing and local model tools through a CLI, Python library, and validated
-JSON jobs.
+Build photo and video stories in a local visual editor, or run the same
+validated jobs from Python and the CLI. Animate a camera across a canvas
+of photos, mix sound, and export social crops with matching covers.
+Photo2Panning also reconstructs 3D scenes, reuses depth for image effects,
+and runs local FLUX edits, precise region repairs, segmentation, and
+image-guided video.
 
-[Quick start](#quick-start) · [Demos](#demos) ·
+[Quick start](#quick-start) · [Studio](#local-visual-studio) · [Demos](#demos) ·
+[Projects](docs/projects.md) · [Depth effects](#reuse-depth-for-focus-and-occlusion) ·
 [FLUX edits](#change-the-season-with-flux) ·
 [Photo transition](#connect-two-pexels-photos) ·
-[Abandoned city](#abandon-a-busy-street-with-flux-3) · [Features](#features) ·
+[Precise repair](#repair-the-two-remaining-vehicles) ·
+[Two references](#combine-two-reference-photos) · [Features](#features) ·
 [Python](#python-library) · [LLM tools](#llm-tools-and-json-jobs) ·
 [Local models](#local-models)
 
@@ -49,7 +53,66 @@ uv run pic2panning --help
 Photo motion, video processing, and ordinary image edits work with this
 core installation. Try either public photo below.
 
+## Local visual Studio
+
+```bash
+uv run pic2panning studio --workspace ~/Pictures/Photo2Panning
+```
+
+[<img src="examples/media/studio.png" alt="Local Studio with a real coastline depth preview, layer list, depth controls, and camera keyframes on the timeline" width="1100"/>](docs/studio.md)
+
+Studio opens at `http://127.0.0.1:8765`. Import media, place image, video,
+and text layers, then set camera and layer keyframes on the timeline.
+The same workspace holds audio tracks, painted selections, cached depth,
+and explicit AI jobs. Imports preserve the original files.
+
+Preview frames use the canonical compositor. Scrubbing reuses existing
+media and cached depth; model inference starts from a run button. Saved
+projects retain their operation graph and reuse verified intermediates.
+The jobs drawer provides progress, cancellation, outputs, and errors.
+See the [Studio guide](docs/studio.md) and
+[saved-project contract](docs/projects.md).
+
 ## Demos
+
+### Compose a story across several photos
+
+[<img src="examples/media/social-story.gif" alt="A continuous camera crosses the coastal photo, holds on the waterfall, and moves into the aurora photo with animated text" width="216"/>](examples/media/social-story.mp4)
+
+```bash
+uv run pic2panning run examples/compose.json
+uv run pic2panning run examples/preview.json
+uv run pic2panning run examples/social-pack.json
+```
+
+The eight-second composition moves across the coast and aurora photos,
+pauses on a camera pose, and fades viewport text over an original 120 BPM
+soundtrack. The social pack renders portrait, feed, and square movies with
+a cover and carousel stills from the same canvas. Its music is synthesized
+by [the example script](examples/make_social_demo.py) and distributed under
+this repository's MIT license.
+
+The [composition](examples/compose.json), [social pack](examples/social-pack.json),
+and [cached project](examples/project.json) are ordinary JSON jobs.
+They use the core install. The project prepares an image before rendering
+its selected target, with source hashes and cache hits in its report.
+
+### Reuse depth for focus and occlusion
+
+[<img src="examples/media/depth/waterfall-depth-motion.gif" alt="The coastline title passes behind the cliff while cached depth changes focus and adds a small parallax move" width="540"/>](examples/media/depth/waterfall-depth-motion.mp4)
+
+This complete three-second example uses a bundled float32 depth map for
+rack focus, fog, directional lighting, and small parallax. The title moves
+behind foreground geometry. Rendering it needs no model weights:
+
+```bash
+uv run pic2panning run examples/compose-depth.json
+```
+
+The [depth guide](docs/depth.md) includes the metric TIFF, preview, normals,
+foreground mask, and source-bound manifest. Extract another asset with
+the `camera` extra and [depth job](examples/depth.json). On an M3 Max, a
+360×240 frame using cached depth rendered in 0.073 seconds.
 
 ### Pan across Múlafossur waterfall
 
@@ -196,17 +259,64 @@ Two small vehicles remain in the distance in this result.
 
 Photo: [Clément Proust, Pexels](https://www.pexels.com/photo/busy-new-york-city-street-scene-with-crosswalk-36286355/).
 
+### Repair the two remaining vehicles
+
+[<img src="examples/media/repair/vehicles-detail.jpg" alt="Enlarged distant vehicles before repair, their exact cyan mask, and the repaired road with both vehicles removed" width="768"/>](examples/media/repair/street-repaired.png)
+
+The context-crop repair targets those two distant vehicles in the existing
+FLUX result. It enlarges a source-pixel region with surrounding context,
+runs FLUX 3 locally, and composites the repaired pixels through the supplied
+mask. Both vehicles are removed in this native result. All 702,731 pixels
+outside the mask remain byte-identical to the input PNG.
+
+```bash
+uv run --extra models pic2panning run examples/repair-vehicles.json
+```
+
+The [job](examples/repair-vehicles.json) uses the 1024×688 FLUX result,
+64 pixels of context, a 768-pixel model edge, three-pixel inward feathering,
+4-bit weights, 16 steps, and seed 7. It took 175.15 seconds with a
+19.15 GiB peak footprint on the 36 GiB M3 Max. The comparison enlarges
+the selected area; inspect the [full PNG](examples/media/repair/street-repaired.png)
+and [binary mask](examples/media/repair/vehicle-mask.png) for exact pixels.
+
+### Combine two reference photos
+
+[<img src="examples/media/references/comparison.jpg" alt="Two independent Cloud Gate reference photos beside the actual FLUX 3 image generated from both" width="984"/>](examples/media/references/bean-two-references.png)
+
+FLUX 3 accepts ordered reference images. These two public Cloud Gate
+photographs condition one generated view with the sculpture, plaza, and
+reflections. The result is a new image whose details can differ from both
+guides.
+
+```bash
+uv run --extra models pic2panning run examples/generate-references.json
+```
+
+The [job](examples/generate-references.json) uses both images in `references`,
+4-bit weights, 16 steps, seed 7, and 512×288 output. The native two-image
+run took 147.96 seconds with a 24.30 GiB peak footprint. The API accepts
+up to ten conditioning images total, with an optional `source` counted
+first. This measured example exercises two. The same public guides and
+their credits appear in the [video example](#connect-two-pexels-photos).
+
 ## Features
 
 | Tool | Controls |
 | --- | --- |
+| Local Studio | Timeline, layer controls, canonical previews, saved JSON, queued jobs |
+| Compositions | Multiple photos, camera holds and easing, text and graphic transforms |
+| Projects and cache | Explicit dependencies, source hashes, verified intermediate reuse |
+| Depth effects | Metric extraction, rack focus, fog, lighting, parallax, text occlusion |
+| Selective motion | Painted or segmented image masks, clean plates, video cinemagraphs |
 | Photo motion | Four pan directions, zoom, return path, slower center motion |
 | 3D camera | Local scene reconstruction, calibrated excursion, return and resumed pan |
 | Video | Crop to a new aspect ratio, bouncing pan, zoom, playback speed |
 | Generated video | Local LTX shot guided by a first and last photo |
 | Audio and titles | Retain source sound, replace or loop music, add title cards |
+| Audio editing | Music, voice and ambience mixing, gain, fades, ducking, beat markers |
 | Image editing | Crop, resize, rotate, flip, brightness, contrast, saturation |
-| Local models | Prompted generation, reference-image edits, masked fill, segmentation |
+| Local models | Ordered FLUX 3 references, context-crop repair, masked fill, segmentation |
 
 Sizes use **width, height**. `1080 1920` produces a 9:16 portrait video;
 `1920 1080` produces 16:9 landscape. Images retain their proportions and
@@ -229,7 +339,9 @@ sets the closest magnification and defaults to `4/3`.
 its direction and reduce strobing during fast pans. Angles range from 0 to 360;
 the default `0` keeps instantaneous frames. An enabled shutter renders
 eight samples per interior photo frame, increasing render time. The first
-and last frames stay sharp. This option applies only to photos.
+and last frames stay sharp. The `render` command applies this option only
+to photos. Compositions expose their own
+[motion-exposure controls](docs/agent-tools.md#compose-layers-and-camera-keyframes).
 
 Choose timing explicitly: `--duration 7.5 --fps 60 --shutter-angle 180`
 combines a slower photo pan with more output frames and motion exposure.
@@ -343,8 +455,10 @@ result = render(
 print(result.model_dump_json(indent=2))
 ```
 
-The public functions are `render`, `reconstruct_scene`, `render_camera`,
-`edit`, `generate`, `generate_video`, `mask`, and `run_job`.
+The public functions include `render`, `reconstruct_scene`, `render_camera`,
+`edit`, `generate`, `generate_video`, `mask`, `repair`, `extract_depth`,
+`compose`, `preview`, `detect_beats`, `social_pack`, `run_project`, and
+`run_job`.
 Requests validate before processing. Results include
 output paths, dimensions, and timing when applicable. Existing outputs
 require `overwrite=True` or `--overwrite`. Input aliases stay protected.
@@ -361,13 +475,13 @@ uv run pic2panning validate examples/render.json
 uv run pic2panning run examples/render.json
 ```
 
-A job selects `render`, `scene`, `camera`, `edit`, `generate`,
-`generate-video`, or `mask`
-with its `kind` field.
+A job selects its operation with `kind`: `render`, `scene`, `camera`,
+`edit`, `generate`, `generate-video`, `mask`, `depth`, `compose`, `preview`,
+`beats`, `repair`, `social-pack`, or `project`.
 Unknown fields fail validation. `validate` checks the request without
 reading media or loading models. Commands write JSON results to stdout
-and return a nonzero exit status on failure. Relative paths resolve from
-the process working directory.
+and return a nonzero exit status on failure. Standalone paths resolve from
+the process working directory. Project nodes use `ProjectRequest.workspace`.
 
 Examples: [render](examples/render.json), [image edits](examples/edit.json),
 [scene reconstruction](examples/scene.json),
@@ -375,7 +489,11 @@ Examples: [render](examples/render.json), [image edits](examples/edit.json),
 [image generation](examples/generate.json),
 [masked image editing](examples/generate-masked.json),
 [video generation](examples/generate-video.json),
-[segmentation](examples/mask.json).
+[segmentation](examples/mask.json), [context repair](examples/repair-vehicles.json),
+[ordered references](examples/generate-references.json),
+[depth](examples/depth.json), [composition](examples/compose.json),
+[preview](examples/preview.json), [beats](examples/beats.json),
+[social pack](examples/social-pack.json), [cached project](examples/project.json).
 
 ## Local models
 

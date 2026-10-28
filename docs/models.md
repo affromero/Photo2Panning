@@ -90,6 +90,25 @@ decoded successfully, and inspected pause and return boundaries retained
 the original framing. This verifies one public scene; other photos and
 wider camera paths need their own visual check.
 
+### Reusable depth without Gaussian reconstruction
+
+`depth` uses the same pinned MoGe inference and writes metric float32 TIFF,
+16-bit preview, derived normals, foreground mask, and a source-bound JSON
+manifest. It does not allocate Gaussian rendering resources. Cached depth
+effects and text occlusion use the core install on the CPU.
+
+```bash
+uv run --extra camera pic2panning run examples/depth.json
+uv run pic2panning run examples/compose-depth.json
+```
+
+The second command uses the bundled asset and can run before extraction.
+On the 36 GiB M3 Max, the 1920×1280 waterfall source produced a 768×512
+grid in 30.94 seconds with 1800 tokens on MPS. Peak process RSS was
+2.79 GiB. Cached 360×240 effect frames took 0.073 seconds; 1080×720 frames
+took 0.526 seconds. See the [depth guide](depth.md) for files, calibration,
+normal uncertainty, effect controls, and source checksums.
+
 ## First and last frame video
 
 Install the separate video dependencies:
@@ -206,6 +225,19 @@ multiples of 16. `--weights` selects a compatible local or Hugging Face
 MFLUX checkpoint; check the checkpoint's architecture and quantization
 before using it.
 
+FLUX 3 also accepts an ordered `references` list, including requests with
+no primary `source`. Up to ten conditioning images are allowed in total;
+when `source` is present, it is first and counts toward that limit. Other
+FLUX variants reject additional references. Custom backends must expose
+the explicit reference-image capability to receive them.
+
+The [two-reference job](../examples/generate-references.json) combines the
+bundled Cloud Gate guides into a 512×288 image using 4-bit weights,
+16 steps, and seed 7. Its actual [result](../examples/media/references/bean-two-references.png)
+is shown beside both inputs in the README. The native two-image run took
+147.96 seconds and reached a 24.30 GiB peak memory footprint on the
+36 GiB M3 Max. These native measurements cover two conditioning images.
+
 The FLUX 3 distilled model does not use classifier-free guidance. Use
 guidance only with a model that supports it. Image strength belongs to
 FLUX 1 image-to-image processing. Model requests reject incompatible
@@ -259,9 +291,36 @@ uses FLUX 3 reference editing to remove foreground pedestrians and traffic
 from a crowded street and add signs of abandonment. At 1024 by 688,
 4-bit weights, seed 7, and 16 steps, it took 191.77 seconds and peaked at
 29.28 GB physical memory. Two small distant vehicles remain visible;
-targeted cleanup trials did not remove them. This is a whole-image edit.
+the generated result remains available unchanged as the input for the
+precise repair below. The whole-image operation can change all pixels.
 
 Other model variants and larger images have different memory requirements.
+
+### Context-crop repair
+
+`RepairRequest` selects a rectangle in EXIF-oriented source pixels, with
+exclusive right and bottom edges. `context` adds surrounding source pixels
+before inference. The tool preserves aspect, enlarges that crop to
+`max_edge`, pads model dimensions to multiples of 16, and calls the same
+FLUX 3 generation function. It resizes the result back and composites only
+the selected pixels into the full-resolution image.
+
+An optional full-source PNG `mask` intersects the rectangle. `feather`
+softens its edge inward, preserving black pixels outside the selection.
+The result keeps the source dimensions and requires lossless PNG.
+
+```bash
+uv run --extra models pic2panning run examples/repair-vehicles.json
+```
+
+The [actual repaired PNG](../examples/media/repair/street-repaired.png)
+removes both distant vehicles left by the whole-image street edit.
+The [comparison](../examples/media/repair/vehicles-detail.jpg) enlarges the
+before, binary selection displayed in cyan, and repaired area. All 702,731
+unselected pixels remained byte-identical; 1,673 selected pixels changed.
+The request used 64 pixels of context, a 768-pixel model edge, three-pixel
+feathering, 4-bit weights, 16 steps, and seed 7. The native run took
+175.15 seconds with a 19.15 GiB peak memory footprint on the 36 GiB M3 Max.
 
 ## Text-guided segmentation
 

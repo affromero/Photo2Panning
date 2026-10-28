@@ -1,0 +1,10 @@
+{
+  "kind": "beats",
+  "source": "examples/media/demo-music.wav",
+  "output": "outputs/social-demo/beats.json",
+  "start": 0.0,
+  "duration": null,
+  "sensitivity": 1.5,
+  "minimum_gap": 0.2,
+  "overwrite": false
+}

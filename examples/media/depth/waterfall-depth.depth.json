@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "source_sha256": "f054fa6295a72221e3ab454dc8c9fdd8e79b7160d49fc5b5f141d53085d85ebd",
+  "width": 1920,
+  "height": 1280,
+  "grid_width": 768,
+  "grid_height": 512,
+  "intrinsics": [
+    [
+      353.59210205078125,
+      0.0,
+      384.0
+    ],
+    [
+      0.0,
+      353.59210205078125,
+      256.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "depth": {
+    "path": "waterfall-depth.tiff",
+    "sha256": "6ae62fc31e5b9ba216bed18f88b85b1ed08cd563e43fa2d0fecfe93f4e4a103c"
+  },
+  "preview": {
+    "path": "waterfall-depth.preview.png",
+    "sha256": "206e3e16026b2fb43cd35bba12c543981d49070774c36fca20502cb81b8ea41a"
+  },
+  "normals": {
+    "path": "waterfall-depth.normals.png",
+    "sha256": "2971e41f621884726d36fbe49a1f77383a75ef4c9ba9d03dcb072778fbc95ece"
+  },
+  "mask": {
+    "path": "waterfall-depth.mask.png",
+    "sha256": "aa96a4df290504910a7c2fcbec06a59c16641c5f49d4d1adfe604871af2ec6cf"
+  },
+  "preview_near_metres": 19.950944442749023,
+  "preview_far_metres": 506.370694580078,
+  "model": "Ruicheng/moge-2-vitl-normal",
+  "model_revision": "cb0e8bbd6b1e243589717c78e750b1ba4c093acf",
+  "source_revision": "925b8ed835a7a9cdb7578ba15c658a0afc969030",
+  "checkpoint_sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
+  "device": "mps",
+  "num_tokens": 1800,
+  "max_edge": 768,
+  "units": "metres",
+  "depth_axis": "camera-z",
+  "orientation": "EXIF-transposed RGB",
+  "coordinates": "OpenCV x-right y-down z-forward",
+  "pixel_centres": "image edges plus 0.5",
+  "mask_semantics": "white semantic foreground; sky depth retained",
+  "preview_encoding": "uint16 linear z, near=65535 far=0",
+  "normal_encoding": "depth-derived camera-facing unit XYZ mapped [-1,1] to RGB [0,255]",
+  "license": "MIT"
+}

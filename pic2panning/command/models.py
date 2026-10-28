@@ -25,6 +25,9 @@ class GenerateCommand(OutputCommand):
     source: str | None = None
     """Reference image path or URL; omit for text-to-image generation."""
 
+    references: tuple[str, ...] = ()
+    """Ordered additional FLUX 3 images, up to ten including source."""
+
     model: GenerationModel = GenerationModel.FLUX3
     """Model family for generation, reference editing, or masked fill."""
 
@@ -56,6 +59,7 @@ class GenerateCommand(OutputCommand):
         """Validate model-specific options before loading weights."""
         return GenerateRequest(
             source=self.source,
+            references=self.references,
             output=self.output,
             prompt=self.prompt,
             model=self.model,

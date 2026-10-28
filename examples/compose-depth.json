@@ -1,0 +1,55 @@
+{
+  "kind": "compose",
+  "canvas": {"width": 1920, "height": 1280},
+  "duration": 3,
+  "camera": [{"at": 0, "x": 960, "y": 640}],
+  "layers": [
+    {
+      "kind": "image",
+      "id": "waterfall",
+      "source": "examples/media/waterfall.jpg",
+      "duration": 3,
+      "size": {"width": 1920, "height": 1280},
+      "keyframes": [{"at": 0, "x": 960, "y": 640}],
+      "depth": {
+        "metadata": "examples/media/depth/waterfall-depth.depth.json",
+        "focus_metres": 40,
+        "focus_end_metres": 160,
+        "blur_radius": 8,
+        "fog_density": 0.0007,
+        "fog_color": "#c5d5e0",
+        "ambient": 0.65,
+        "relight_strength": 0.2,
+        "light_direction": [-0.4, -0.5, -1],
+        "parallax_x": 10,
+        "parallax_y": -3,
+        "exposed_pixels": "edge-repeat"
+      }
+    },
+    {
+      "kind": "text",
+      "id": "title",
+      "text": "COASTLINE",
+      "font_size": 160,
+      "color": "#edf4ed",
+      "stroke_width": 2,
+      "stroke_color": "#edf4ed",
+      "duration": 3,
+      "size": {"width": 1600, "height": 240},
+      "keyframes": [
+        {"at": 0, "x": 900, "y": 300},
+        {"at": 3, "x": 900, "y": 280}
+      ],
+      "occlusion": {
+        "layer_id": "waterfall",
+        "plane_metres": 800,
+        "feather_metres": 2
+      }
+    }
+  ],
+  "output": "waterfall-depth-motion.mp4",
+  "size": {"width": 768, "height": 512},
+  "fps": 20,
+  "encoding": {"crf": 18, "preset": "veryfast"},
+  "overwrite": false
+}

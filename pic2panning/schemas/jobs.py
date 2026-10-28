@@ -5,21 +5,11 @@ from typing import Annotated
 from pydantic import Field, JsonValue, TypeAdapter
 
 from pic2panning.schemas.base import PydanticBaseModel
-from pic2panning.schemas.camera import CameraRequest
-from pic2panning.schemas.editing import EditRequest
-from pic2panning.schemas.media import RenderRequest
-from pic2panning.schemas.models import GenerateRequest, MaskRequest
-from pic2panning.schemas.scene import SceneRequest
-from pic2panning.schemas.video import GenerateVideoRequest
+from pic2panning.schemas.creative.operations import Operation
+from pic2panning.schemas.creative.project import ProjectRequest
 
 type Job = Annotated[
-    RenderRequest
-    | CameraRequest
-    | SceneRequest
-    | EditRequest
-    | GenerateRequest
-    | MaskRequest
-    | GenerateVideoRequest,
+    Operation | ProjectRequest,
     Field(discriminator="kind"),
 ]
 

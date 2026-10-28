@@ -1,0 +1,9 @@
+{
+  "kind": "depth",
+  "source": "examples/media/waterfall.jpg",
+  "output": "waterfall-depth.tiff",
+  "num_tokens": 1800,
+  "max_edge": 768,
+  "device": "mps",
+  "overwrite": false
+}

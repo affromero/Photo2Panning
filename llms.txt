@@ -1,70 +1,150 @@
 # Photo2Panning
 
-Python library and CLI for photo motion, video processing, image editing,
-local geometry reconstruction, and quantized models on Apple Silicon.
+Local visual editor, Python library, and CLI for layered photo/video
+stories, verified project caching, depth effects, and local models on
+Apple Silicon.
 
-- [README](readme.md): Installation, public APIs, and runnable commands.
-- [Tool guide](docs/agent-tools.md): Job selection, field meanings, validation,
-  execution, and error handling for agents.
-- [Local models](docs/models.md): Quantized FLUX, CPU segmentation, local
-  LTX first/last frame video, and MoGe-2 scene reconstruction with Metal
-  Gaussian rendering.
-- [Repository instructions](AGENTS.md): Rules for changing this library.
-- [Render job](examples/render.json): Photos, per-clip motion, and output size.
-- [Scene job](examples/scene.json): Reconstruct the bundled public waterfall
-  into a reusable Gaussian PLY and source-bound calibration JSON.
-- [Camera job](examples/camera.json): Pan the same photo, pause for a 3D
-  camera excursion, return to the paused composition, and resume.
-- [Edit job](examples/edit.json): Ordered deterministic picture operations.
-- [Generation job](examples/generate.json): Turn the bundled waterfall
-  reference into a snowy winter scene with quantized FLUX 3.
-- [Masked edit job](examples/generate-masked.json): Replace the sky selected
-  by the mask job, retaining pixels outside its black-and-white PNG mask.
-- [Abandoned-city job](examples/edit-empty-street.json): Edit a busy public
-  street photo with FLUX 3, removing foreground pedestrians and traffic
-  and adding signs of abandonment.
-- [Video generation job](examples/generate-video.json): Local LTX camera
-  transition between two independent Pexels views of Cloud Gate.
-- [Mask job](examples/mask.json): Select the sky in the same public reference
-  using Grounding DINO and SAM on the CPU.
-- [Soundtrack example](examples/add_music.py): Replace a finished video's
-  audio while copying its encoded video without recompression.
+- [README](readme.md): Installation, native examples, and public APIs.
+- [Tool guide](docs/agent-tools.md): Request kinds, field meanings,
+  coordinates, timing, validation, execution, and result handling.
+- [Studio guide](docs/studio.md): Local editor, saved graphs, canonical
+  previews, masks, audio, and explicit background model jobs.
+- [Project guide](docs/projects.md): Dependency edges, workspace paths,
+  content fingerprints, cache policies, and execution reports.
+- [Depth guide](docs/depth.md): Bound float32 assets, CPU effects, text
+  occlusion, source-pixel units, and observed latency.
+- [Local models](docs/models.md): Setup, quantization, pinned models,
+  conditioning controls, and measured native memory use.
+- [Repository instructions](AGENTS.md): Contributor rules.
 
-Get the authoritative JSON schema with `uv run pic2panning schema`.
-Validate with `uv run pic2panning validate job.json` before execution.
-Run a validated request with `uv run pic2panning run job.json`.
-Call the Python API with the same validated request models when embedding.
-Job kinds are render, scene, camera, edit, generate, generate-video, and mask.
-Public API functions are render, reconstruct_scene, render_camera, edit,
-generate, generate_video, mask, and run_job.
-Image and mask models use the models extra; LTX uses the video extra.
-Scene reconstruction and Gaussian camera rendering use the camera extra.
-FLUX 3 can edit the entire reference image without a mask. With a mask, the
-library composites its reference edit over the source. FLUX 1 Fill uses
-the mask during generation. Black mask pixels retain source pixels exactly
-in the final PNG; the cyan README overlay is a display of the selection.
-For the bundled edit workflow, run examples/generate.json for the winter
-edit, or examples/mask.json then examples/generate-masked.json for the sky.
-The paired sky requests use the same 768 by 512 reference dimensions.
-For the abandoned-city workflow, run examples/edit-empty-street.json.
-It uses FLUX 3 reference editing without a mask and can change the whole
-image. Two small distant vehicles remain; inspect outputs before claiming
-complete removal. For masked workflows, padding expands selections along
-each axis, from 0 to 128 pixels
-(default 0), before saving or merging. The CLI flag is --padding. Inspect
-the prepared mask for missed edges and shadows; black pixels outside that
-mask retain the original in the final PNG.
-Scene requests require source, output (.ply), and metadata (.json), with
-explicit mps or cpu execution and a 1200 to 3600 token budget (default 1800).
-max_edge limits the geometry image to 256 to 4096 pixels on its longest
-edge (default 1920), while retaining the original photo for panning.
-SceneResult returns output, metadata, points, source_sha256, and predictor.
-Camera requests require source, scene, metadata, and output (.mp4). They
-verify source identity before rendering. PLY and calibration can be reused
-for different motion settings. Camera jobs return the ordinary JobResult.
-Generated video is silent. Endpoint guides influence generation without
-promising identical input pixels in the output.
-Use views with shared geometry for a camera transition. A prompt does not
-guarantee a geometric morph between unrelated scenes; inspect all frames
-for cuts, dissolves, invented objects, and unstable geometry before
-accepting an output.
+Runnable jobs:
+- [Render](examples/render.json): Per-clip motion and output dimensions.
+- [Scene](examples/scene.json): Gaussian PLY and source-bound calibration.
+- [Camera](examples/camera.json): Photo pan, calibrated excursion, return.
+- [Edit](examples/edit.json): Ordered deterministic image operations.
+- [Generate](examples/generate.json): Whole-image FLUX 3 winter edit.
+- [Masked edit](examples/generate-masked.json): Change the selected sky.
+- [Mask](examples/mask.json): Grounding DINO and SAM sky selection.
+- [Street edit](examples/edit-empty-street.json): Whole-frame abandoned-city
+  edit. Two distant vehicles remain in this specific output.
+- [Precise repair](examples/repair-vehicles.json): Remove those two vehicles
+  through a contextual crop while preserving all unselected pixels.
+- [References](examples/generate-references.json): Two ordered Cloud Gate
+  guides condition one FLUX 3 image.
+- [Guided video](examples/generate-video.json): LTX transition between
+  independent public Cloud Gate photos.
+- [Composition](examples/compose.json): Multi-photo camera path, hold,
+  viewport text, beat markers, and an original soundtrack.
+- [Preview](examples/preview.json): Canonical PNG frame from that story.
+- [Beats](examples/beats.json): CPU onset analysis of the soundtrack.
+- [Social pack](examples/social-pack.json): Portrait, feed, square movies,
+  matching covers, and carousel stills.
+- [Project](examples/project.json): Prepare a photo, then execute a selected
+  film or social target through the verified cache.
+- [Depth](examples/depth.json): Metric TIFF, 16-bit preview, derived normals,
+  semantic foreground mask, and source-bound JSON.
+- [Cached depth composition](examples/compose-depth.json): CPU rack focus,
+  fog, lighting, small parallax, and foreground text occlusion.
+- [Soundtrack script](examples/add_music.py): Replace audio while copying
+  the encoded video without recompression.
+
+Use `uv run pic2panning schema` for the authoritative JSON schema.
+Validate with `uv run pic2panning validate job.json`.
+Execute with `uv run pic2panning run job.json`.
+Python uses the same validated request models and `run_job` dispatcher.
+Job kinds: render, scene, camera, edit, generate, generate-video, mask,
+depth, compose, preview, beats, repair, social-pack, project.
+Public functions include render, reconstruct_scene, render_camera, edit,
+generate, generate_video, mask, repair, extract_depth, compose, preview,
+detect_beats, social_pack, run_project, and run_job.
+
+Studio starts with `uv run pic2panning studio --workspace DIRECTORY`.
+It serves 127.0.0.1 and confines media, project files, and outputs to that
+workspace. Imports preserve original files. Scrubbing uses media and
+cached depth. Model execution starts from explicit run actions.
+
+Dependency extras:
+- Core: deterministic editing, media processing, compositions, previews,
+  audio mixing, beat analysis, social packs, projects, cached depth effects.
+- models: FLUX generation and repair; CPU Grounding DINO and SAM masks.
+- camera: pinned MoGe-2 inference and Metal Gaussian rendering.
+- video: local LTX first/last-frame generation.
+
+FLUX 3 references are ordered. Optional source comes first, followed by
+references. At most ten conditioning images total are accepted. The native
+public example tests two at 512x288, q4, 16 steps, seed 7. Other model
+families reject additional references. A custom backend needs the explicit
+reference-image capability. Errors surface without backend fallback.
+An unmasked FLUX edit can change the entire image. With a mask, FLUX 3 edits
+the reference and the library composites through the mask; FLUX 1 Fill
+conditions generation on the mask. Source, mask, and output dimensions
+match. Black-mask pixels remain exact in the final PNG.
+RepairRequest.region uses EXIF-oriented source pixels and exclusive
+right/bottom edges. Optional mask dimensions match the full source.
+Context adds surrounding source pixels; max_edge controls enlargement with
+aspect preserved and 16-pixel model padding. Feathering is inward. Repair
+returns a full-size PNG. The bundled result removes both remaining street
+vehicles and preserves all 702,731 unselected pixels byte-for-byte.
+Mask padding expands selections along each axis by 0 to 128 pixels before
+saving or merging. Inspect prepared masks for missing edges and shadows.
+
+Scene requests require source, output (.ply), and metadata (.json).
+Devices are explicit mps or cpu. num_tokens accepts 1200..3600, default 1800;
+max_edge accepts 256..4096, default 1920. Original photo dimensions remain
+the calibrated camera reference. SceneResult returns output, metadata,
+points, source_sha256, predictor.
+Camera requests require source, scene, metadata, output (.mp4). Source and
+scene identity checks run before rendering. Reuse matching PLY/calibration
+for different camera paths. Camera output is a JobResult.
+DepthResult returns output, metadata, preview, normals, mask, source_sha256,
+width, height, grid_width, grid_height. Keep all five files with their
+relative-path manifest. Cached loading verifies source identity, artifact
+hashes, modes, and dimensions. TIFF holds float32 estimated camera-Z metres;
+the 16-bit PNG stores a normalized display preview. DepthStyle exposes
+metric focus and end focus, blur radius, fog, lighting, and bounded
+parallax. Blur/parallax use oriented source pixels; working grids scale
+those pixel controls. Explicit edge-repeat parallax is bounded to 32 pixels
+per axis. DepthOcclusion.layer_id selects another depth-enabled image.
+Its nearer white semantic foreground hides the occluded layer.
+
+ComposeRequest declares canvas, size, duration, camera, layers, audio,
+output, fps. World-layer centers and camera centers use canvas pixels.
+At zoom 1, canvas height maps to output height. Layers render in array order
+from back to front. Camera keyframes use absolute seconds; layer keyframes
+use local seconds from layer.start. Times start at 0 and strictly increase.
+Easing belongs to the outgoing segment; repeated poses create holds.
+Viewport layers use authored output pixels. Reframing scales their centers
+per axis and their graphics uniformly with output width.
+Video source_times are monotone maps. Repeated source times freeze pixels;
+video sound comes from explicit MixTracks. Cinemagraph masks choose moving
+pixels over an explicit reference image or source reference_time.
+Masks and plates align to oriented source dimensions.
+Compose shutter_angle defaults to 0. shutter_samples defaults to 8,
+with 1..16 accepted.
+Enabled exposure integrates samples in linear light; endpoints stay exact.
+PreviewRequest embeds a composition and selects frame or at, saving PNG.
+MixTrack roles are music, voice, ambience, with source_start, start,
+duration, gain_db, fades, loop. Ducking music/ambience requires a voice
+track. BeatAnalysis markers are relative to the analyzed interval; add the
+track's timeline start when populating composition.beats.
+SocialPackRequest renders the original canvas through aspect variants with
+cover_at, carousel_at, and optional separate guide previews. Defaults are
+1080x1920, 1080x1350, 1080x1080.
+
+ProjectRequest contains project, workspace, output, targets, cache,
+overwrite. ProjectDocument nodes contain id, job, depends_on, enabled.
+Consumers must depend on their producers, including files referenced by
+depth manifests. Empty targets runs all enabled nodes; otherwise the runner
+includes target dependencies transitively. Graph and alias checks happen
+before execution. Cache policies are reuse (default), refresh, off.
+Fingerprints include input bytes, settings, formats, processing code, and
+model identities. Reuse verifies artifact hashes. ProjectResult reports
+node outputs, cache_hit, elapsed_seconds, fingerprint, input_hashes, and
+canonical results. Standalone paths resolve from cwd; project nodes resolve
+from workspace. Existing outputs require explicit overwrite; sources remain
+protected.
+
+LTX output is silent. Endpoint guides influence generation without
+promising identical endpoint pixels. Prefer overlapping views with shared
+geometry; inspect the full clip for cuts, invented objects, and unstable
+details before accepting a result.

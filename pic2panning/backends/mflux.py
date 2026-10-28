@@ -79,7 +79,7 @@ def model_factory(request: GenerateRequest) -> ModelFactory:
         )
         return (
             module.Flux3KleinEdit
-            if request.source is not None
+            if request.source is not None or request.references
             else module.Flux3Klein
         )
     if request.model == GenerationModel.FLUX1_FILL:
@@ -95,6 +95,20 @@ def model_factory(request: GenerateRequest) -> ModelFactory:
     return flux.Flux1
 
 
+def canonical_default_checkpoint(request: GenerateRequest) -> str:
+    """Resolve the selected checkpoint without importing a model package."""
+    checkpoint_names = {
+        GenerationModel.FLUX3: "flux-3-image-klein",
+        GenerationModel.FLUX1_SCHNELL: "flux-1-schnell",
+        GenerationModel.FLUX1_DEV: "flux-1-dev",
+        GenerationModel.FLUX1_FILL: "flux-1-dev-fill",
+    }
+    return request.weights or (
+        f"mflux-community/{checkpoint_names[request.model]}-mflux-"
+        f"q{int(request.quantization)}"
+    )
+
+
 def model_parameters(request: GenerateRequest) -> dict[str, object]:
     """Build quantized weight options for a documented MFLUX variant."""
     names = {
@@ -107,24 +121,32 @@ def model_parameters(request: GenerateRequest) -> dict[str, object]:
         "ConfigModule",
         load_dependency("mflux.models.common.config.model_config"),
     )
-    checkpoint_names = {
-        GenerationModel.FLUX3: "flux-3-image-klein",
-        GenerationModel.FLUX1_SCHNELL: "flux-1-schnell",
-        GenerationModel.FLUX1_DEV: "flux-1-dev",
-        GenerationModel.FLUX1_FILL: "flux-1-dev-fill",
-    }
-    weights = request.weights or (
-        f"mflux-community/{checkpoint_names[request.model]}-mflux-"
-        f"q{int(request.quantization)}"
-    )
     return {
         "quantize": int(request.quantization),
-        "model_path": weights,
+        "model_path": canonical_default_checkpoint(request),
         "model_config": configs.ModelConfig.from_name(names[request.model]),
         "lora_paths": [lora.path for lora in request.loras] or None,
         "lora_scales": [lora.scale for lora in request.loras] or None,
         "bake_lora": False,
     }
+
+
+def inference_parameters(request: GenerateRequest) -> dict[str, object]:
+    """Translate the model's explicit inference options and default guidance."""
+    parameters: dict[str, object] = {
+        "seed": request.seed,
+        "prompt": request.prompt,
+        "num_inference_steps": request.inference_steps,
+        "width": request.size.width,
+        "height": request.size.height,
+    }
+    if request.guidance is not None:
+        parameters["guidance"] = request.guidance
+    elif request.model == GenerationModel.FLUX1_FILL:
+        parameters["guidance"] = 30.0
+    elif request.model == GenerationModel.FLUX1_DEV:
+        parameters["guidance"] = 3.5
+    return parameters
 
 
 class MfluxBackend:
@@ -137,6 +159,23 @@ class MfluxBackend:
         mask: Image.Image | None,
     ) -> Image.Image:
         """Run the chosen model, preserving source geometry and controls."""
+        if request.references:
+            raise ValueError(
+                "Additional references require generate_references"
+            )
+        return self.generate_references(
+            request, (image,) if image is not None else (), mask
+        )
+
+    def generate_references(
+        self,
+        request: GenerateRequest,
+        references: tuple[Image.Image, ...],
+        mask: Image.Image | None,
+    ) -> Image.Image:
+        """Run ordered conditioning through the selected MFLUX model."""
+        if request.model != GenerationModel.FLUX3 and len(references) > 1:
+            raise ValueError("Multiple conditioning images require FLUX 3")
         if sys.platform != "darwin" or platform.machine() != "arm64":
             message = "The MFLUX backend requires an Apple Silicon Mac."
             raise DependencyError(message)
@@ -147,26 +186,17 @@ class MfluxBackend:
         )
         model = factory(**model_parameters(request))
         with TemporaryDirectory(prefix="pic2panning-model-") as directory:
-            parameters: dict[str, object] = {
-                "seed": request.seed,
-                "prompt": request.prompt,
-                "num_inference_steps": request.inference_steps,
-                "width": request.size.width,
-                "height": request.size.height,
-            }
-            if request.guidance is not None:
-                parameters["guidance"] = request.guidance
-            elif request.model == GenerationModel.FLUX1_FILL:
-                parameters["guidance"] = 30.0
-            elif request.model == GenerationModel.FLUX1_DEV:
-                parameters["guidance"] = 3.5
-            if image is not None:
-                image_path = path_join(directory, "source.png")
-                image.save(image_path)
+            parameters = inference_parameters(request)
+            if references:
+                image_paths = []
+                for index, image in enumerate(references):
+                    image_path = path_join(directory, f"source-{index}.png")
+                    image.save(image_path)
+                    image_paths.append(image_path)
                 if request.model == GenerationModel.FLUX3:
-                    parameters["image_paths"] = [image_path]
+                    parameters["image_paths"] = image_paths
                 else:
-                    parameters["image_path"] = image_path
+                    parameters["image_path"] = image_paths[0]
                     if request.model != GenerationModel.FLUX1_FILL:
                         parameters["image_strength"] = (
                             request.strength

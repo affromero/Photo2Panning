@@ -1,0 +1,15 @@
+{
+  "kind": "generate",
+  "references": [
+    "examples/media/bean-transition-first.png",
+    "examples/media/bean-transition-last.png"
+  ],
+  "output": "bean-two-references.png",
+  "prompt": "One photorealistic wide daylight photograph of the polished Cloud Gate sculpture in Chicago. Use both reference photographs to retain the exact rounded mirrored sculpture and its central arch, with a clear three-quarter view that combines the coherent shape and plaza context shown in both images. Retain realistic reflections of the surrounding skyline and trees. A single sculpture, one consistent camera, natural photographic detail.",
+  "model": "flux3",
+  "quantization": 4,
+  "seed": 7,
+  "steps": 16,
+  "size": {"width": 512, "height": 288},
+  "overwrite": false
+}

@@ -15,3 +15,6 @@ htmlcov/
 dist/
 *.egg-info/
 logs/
+.pic2panning/
+.studio/
+outputs/

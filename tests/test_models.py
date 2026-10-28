@@ -10,7 +10,11 @@ import pytest
 from PIL import Image
 from pydantic import ValidationError
 
-from pic2panning.backends.contracts import ImageBackend, MaskBackend
+from pic2panning.backends.contracts import (
+    ImageBackend,
+    MaskBackend,
+    ReferenceImageBackend,
+)
 from pic2panning.errors import MediaError
 from pic2panning.schemas.base import Size
 from pic2panning.schemas.models import GenerateRequest, MaskRequest
@@ -46,6 +50,26 @@ class FailingImageBackend(ImageBackend):
         """Surface the actual provider error."""
         message = "Inference device disconnected"
         raise OSError(message)
+
+
+class OrderedImageBackend(SolidImageBackend, ReferenceImageBackend):
+    """Expose each normalized reference as an output column."""
+
+    @override
+    def generate_references(
+        self,
+        request: GenerateRequest,
+        references: tuple[Image.Image, ...],
+        mask: Image.Image | None,
+    ) -> Image.Image:
+        """Copy each ordered input's first RGB pixel into the result."""
+        result = Image.new("RGB", request.size.as_tuple)
+        for index, reference in enumerate(references):
+            if reference.mode != "RGB":
+                raise ValueError("References must be RGB")
+            with reference.crop((0, 0, 1, 1)) as pixel:
+                result.paste(pixel, (index, 0))
+        return result
 
 
 class SeparateMaskBackend(MaskBackend):
@@ -116,6 +140,100 @@ def test_generation_saves_model_output_at_requested_dimensions(
         assert image.getpixel((0, 0)) == (255, 0, 0)
     assert result.outputs == (str(output),)
     assert result.width == 32
+
+
+@pytest.mark.parametrize("primary", [False, True])
+def test_generation_uses_every_reference_in_declared_order(
+    tmp_path: Path, *, primary: bool
+) -> None:
+    """Primary input precedes normalized additional conditioning images."""
+    sources = tuple(tmp_path / f"reference-{index}.png" for index in range(3))
+    for source, color in zip(sources, ("red", "green", "blue"), strict=True):
+        with Image.new("RGBA", (11, 7), color) as image:
+            image.save(source)
+    output = tmp_path / "out.png"
+    generate(
+        GenerateRequest(
+            source=str(sources[0]) if primary else None,
+            references=tuple(
+                str(source) for source in sources[int(primary) :]
+            ),
+            output=str(output),
+            prompt="Combine these references",
+            size=Size(width=16, height=16),
+        ),
+        OrderedImageBackend(),
+    )
+    with Image.open(output) as image:
+        assert [image.getpixel((index, 0)) for index in range(3)] == [
+            (255, 0, 0),
+            (0, 128, 0),
+            (0, 0, 255),
+        ]
+
+
+def test_reference_generation_rejects_a_backend_without_support(
+    tmp_path: Path,
+) -> None:
+    """Additional images never disappear through a legacy backend."""
+    output = tmp_path / "out.png"
+    with pytest.raises(ValueError, match="support references"):
+        generate(
+            GenerateRequest(
+                references=("unread-reference.png",),
+                output=str(output),
+                prompt="Use this reference",
+            ),
+            SolidImageBackend(),
+        )
+    assert not output.exists()
+
+
+def test_reference_generation_protects_reference_hardlink_alias(
+    tmp_path: Path,
+) -> None:
+    """Overwrite never replaces a conditioning image through a hardlink."""
+    source = tmp_path / "reference.png"
+    output = tmp_path / "out.png"
+    with Image.new("RGB", (16, 16), "blue") as image:
+        image.save(source)
+    output.hardlink_to(source)
+    original = source.read_bytes()
+    with pytest.raises(ValueError, match="aliases"):
+        generate(
+            GenerateRequest(
+                references=(str(source),),
+                output=str(output),
+                prompt="Use this reference",
+                overwrite=True,
+            ),
+            OrderedImageBackend(),
+        )
+    assert source.read_bytes() == output.read_bytes() == original
+
+
+@pytest.mark.parametrize(
+    ("source", "references", "model"),
+    [
+        ("source.png", tuple(f"{index}.png" for index in range(10)), "flux3"),
+        (None, tuple(f"{index}.png" for index in range(11)), "flux3"),
+        (None, ("reference.png",), "flux1-schnell"),
+    ],
+)
+def test_generation_rejects_unsupported_reference_collections(
+    source: str | None, references: tuple[str, ...], model: str
+) -> None:
+    """Conditioning limits and model compatibility fail before inference."""
+    with pytest.raises(ValidationError):
+        GenerateRequest.model_validate(
+            {
+                "source": source,
+                "references": references,
+                "model": model,
+                "output": "out.png",
+                "prompt": "Combine",
+            }
+        )
 
 
 def test_masked_edit_preserves_every_unselected_pixel(tmp_path: Path) -> None:
